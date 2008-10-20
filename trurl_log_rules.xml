@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<rules>
+  <logtype extension="common" name="Common Rules">
+    <rule regexp="^\s*$" result="Information" comment="Ignore pure-whitespace" />
+  </logtype>
+  <logtype extension="timing" name="timing">
+    <rule result="Information" regexp="" comment="Unless the command actually fails (which gives us a meta error anyway) we don't really care." />
+  </logtype>
+  <logtype extension="autogen_sh" name="./autogen.sh">
+    <rule result="Error" regexp="^checking "/>
+    <rule result="Dependency_error" regexp="^\*\*Error\*\*: " />
+    <rule result="Information" comment="while running it would be an error this warning really unimportant">**Warning**: I am going to run `configure' with no arguments.</rule>
+    <rule result="Dependency_error" regexp="(aclocal|libtoolize|autoheader|automake|autoconf):? not found" />
+    <rule result="Information" regexp="^(Running )?(aclocal|autoheader|libtoolize|automake|autoconf)...$"/>
+    <rule regexp="warning: underquoted definition of" result="Information" comment="Macros created for earlier versions of automake seem to be considered underquoted by more recent versions." />
+    <rule regexp="^(\w+/)?(Makefile.am|configure.(ac|in)):(\d+:)? (installing `.*'|the top level)$" result="Information"/>
+    <rule regexp="(run info '\(automake\)Extending aclocal'|or see http://)" result="Information"/>
+    <rule regexp="^Ready to configure$" result="Information"/>
+    <rule regexp=": required file `.*' not found$" result="Error"/>
+    <rule regexp=": required directory .* does not exist$" result="Error"/>
+    <rule regexp="Makefile.am: installing `./depcomp'$" result="Information"/>
+  </logtype>
+  <logtype extension="configure" name="./configure">
+    <rule regexp="cppunit.*WARNING" result="Dependency_error"/>
+    <rule regexp="^configure: WARNING: Couldn't find Avahi. Avahi support will be disabled.$" result="Dependency_error"/>
+    <rule regexp="configure: error: " result="Dependency_error"/>
+    <rule regexp="^checking " result="Information"/>
+    <rule regexp="^(configure|config.status): (creating|executing depfiles commands)" result="Information"/>
+    <rule result="Information" regexp="^appending configuration tag .* to libtool"/>
+    <rule regexp="^$" result="Information"/>
+    <rule result="Dependency_error">
+*** Could not run psql test program, checking why...
+*** The test program failed to compile or link. See the file config.log for the
+*** exact error that occured. This usually means psql was incorrectly installed
+*** or that you have moved psql since it was installed. In the latter case, you
+*** may want to edit the pg_config script: /usr/bin/pg_config
+    </rule>
+  </logtype>
+  <logtype extension="make_all" name="make all" prepend_rules="common" >
+    <rule regexp="^make(\[\d+\])?: \*\*\* \[.*\] Error \d+" result="Error" />
+    <rule regexp="^make: \*\*\* No rule to make target `.*'\.  Stop.$" result="Error" />
+    <rule regexp="^[^:]+:(\d+:)* ((syntax|parse) error|error:|#error|`[^']+' undeclared) " result="Error" />
+    <rule regexp="^OgrePagingLandScapeSceneManager\.cpp:\d+: warning: passing '((const )?Ogre::Real|float)' for argument \d+ to '.*'$" result="Information" comment="suppressing ember ogre warnings" />
+    <rule regexp="^(source/BatchedGeometry\.cpp|source/GrassLoader\.cpp|\./include/ImpostorPage\.h|source/PagedGeometry\.cpp|source/PropertyMaps\.cpp|source/TreeLoader2D\.cpp|source/TreeLoader3D\.cpp|pagedgeometry/include/PagedGeometry\.h|FoliageLayer\.cpp|pagedgeometry/include/ImpostorPage\.h|Input\.cpp|TerrainPageFoliage\.cpp|TerrainPageShadow\.cpp):\d+: warning: converting to '.*' from '((const )?Ogre::Real|float)'$" result="Information" comment="suppressing ember ogre warnings" />
+    <rule regexp="^[^:]+:(\d+:)* warning: #warning " result="Warning" />
+    <rule regexp="^[^:]+:(\d+:)* warning: " result="Warning" />
+    <rule regexp="^libtool: link: warning: " result="Warning" />
+    <rule regexp="^libtool: link: cannot find the library" result="Error" />
+    <rule regexp="^  .* Warning\)" result="Warning" />
+    <rule regexp="\.h: No such file or directory$" result="Error" />
+    <rule regexp="^make  all-\w+" result="Information" />
+    <rule regexp="^/usr/bin/make\s+all-\w+" result="Information" />
+    <rule regexp="^Making all in \w+" result="Information" />
+    <rule regexp="^make[\i+]: Nothing to be done for `all'." result="Information" />
+    <rule regexp="^\s*(if|then) " result="Information" />
+    <!--<rule regexp="^\s*(g(\+\+|cc)|/bin/sh ../libtool) .* [a-zA-Z-_./]*(error|warning)[a-zA-Z-_]*\.(cpp|o|c|lo)" result="Information" />-->
+    <rule regexp="^\s*(g(\+\+|cc)|/bin/sh (../)*libtool) .* ([a-zA-Z-_]*\.(cpp|o|c|lo|la)|.libs/.*)" result="Information" />
+    <rule regexp="mkdir .libs" result="Information" />
+    <rule regexp="creating \w+" result="Information" />
+    <rule regexp="^ar cru .libs/lib\w+" result="Information" />
+    <rule regexp="^ranlib .libs/lib\w+" result="Information" />
+    <rule regexp="^ar cru lib\w+" result="Information" />
+    <rule regexp="^ranlib lib\w+" result="Information" />
+    <!--<rule regexp=" " result="Information" />-->
+    <rule regexp="config.status: executing default-\d+ commands" result="Information" />
+    <rule regexp="make: \*\*\* \[all-recursive-am\] Error \d+" result="Error" />
+    <rule regexp="^make\[\d+\]: ((Entering|Leaving) directory|Nothing to be done for) `.*'" result="Information" />
+    <rule regexp="^\(cd .libs .. rm -f lib\S+ .. ln -s (../)?lib\S+ lib\S+\)$" result="Information" />
+<!--    <rule regexp="^[a-z]+.(c|h|cpp): In function '[a-z_.]+':$" result="Link_next" />-->
+    <rule regexp="^[a-z]+.(c|h|cpp): In function '[a-z_.]+':$" result="Information" />
+    <rule regexp="^.*\.s?o: undefined reference to `.*'$" result="Error" />
+    <rule regexp="^collect2: ld returned 1 exit status$" result="Error" />
+  </logtype>
+  <logtype extension="make_install" name="make install" prepend_rules="make_all">
+    <rule regexp="^Making install in \w+$" result="Information" />
+    <rule regexp="^\s*/usr/bin/install -c -m 644 '(.*\.(h|pc)|README(\.\w+)?|COPYING|AUTHORS|THANKS|NEWS)' '/.*'$" result="Information" />
+    <rule regexp="^\s*/usr/bin/install -c .*\.(so\..*|lai|la)$" result="Information" />
+    <rule regexp="^\s*/usr/bin/install -c '.*' '.*'$" result="Information" />
+    <rule regexp="^\s*\(cd /.*/lib .. \{ ln .* \|\| \{ rm -f .* .. ln .*; \}; \}\)" result="Information" />
+    <rule regexp="^\s*(g(\+\+|cc)|/bin/sh (../)*libtool) --mode=install " result="Information" />
+    <rule regexp="^test -z .* \|\| mkdir -p -- .*$" result="Information" />
+    <rule regexp="ldconfig " result="Information" />
+    <rule result="Information">
+----------------------------------------------------------------------
+Libraries have been installed in:
+
+If you ever happen to want to link against installed libraries
+in a given directory, LIBDIR, you must either use libtool, and
+specify the full pathname of the library, or use the `-LLIBDIR'
+flag during linking and do at least one of the following:
+   - add LIBDIR to the `LD_LIBRARY_PATH' environment variable
+     during execution
+   - add LIBDIR to the `LD_RUN_PATH' environment variable
+     during linking
+   - use the `-Wl,--rpath -Wl,LIBDIR' linker flag
+   - have your system administrator add LIBDIR to `/etc/ld.so.conf'
+
+See any operating system documentation about shared libraries for
+more information, such as the ld(1) and ld.so(8) manual pages.
+----------------------------------------------------------------------
+    </rule>
+    <rule regexp="^   /[-a-z_/]+$" result="Information" comment="The path in the previous rule." />
+  </logtype>
+  <logtype extension="make_check" name="make check" prepend_rules="make_all">
+    <rule regexp="^Making check in \w+$" result="Information" />
+    <rule regexp="^/usr/bin/make\s+\w+" result="Information" />
+    <rule regexp="^\d{4}(-\d{2}){2} \d{2}(:\d{2}){2} " result="Information" comment="cyphesis log" />
+    <rule regexp="^ERIS_(ERROR|WARN): " result="Information" comment="eris log" />
+    <rule result="Information">
+...........F.F.F.........F
+
+
+!!!FAILURES!!!
+Test Results:
+Run:  22   Failures: 4   Errors: 0
+
+
+1) test: tcpskstreamtest::testConstructor_2 (F) line: 141 childskstreamtest.h
+assertion failed
+- Expression: sks-&gt;is_open()
+- Check that echo service is running on local machine
+
+
+2) test: tcpskstreamtest::testOpen (F) line: 160 childskstreamtest.h
+assertion failed
+- Expression: skstream-&gt;is_open()
+- Check that echo service is running on local machine
+
+
+3) test: tcpskstreamtest::testOpenNonblock (F) line: 189 childskstreamtest.h
+assertion failed
+- Expression: skstream-&gt;is_open()
+
+
+4) test: rawskstreamtest::testConstructor_1 (F) line: 262 childskstreamtest.h
+assertion failed
+- Expression: skstream.is_open()
+- Raw only works on GNU/Linux and you must be root
+
+
+PASS: skstreamtestrunner
+==================
+All 1 tests passed
+==================
+    </rule>
+    <rule result="Information">
+got loginError while not logging in
+got Error error op from server without args
+got loginError while not logging in
+got Error error op from server without message
+got loginError while not logging in
+got Error error op from server with bad message
+got loginError while not logging in
+got Error error op from server without args
+    </rule>
+    <rule regexp="^fail" result="Error" comment="Usually some additional service is needed for this to work." />
+    <rule regexp="^FAIL: " result="Error" comment="Usually some additional service is needed for this to work." />
+    <rule regexp="^make: Nothing to be done for `check'.$" result="Information" />
+  </logtype>
+</rules>

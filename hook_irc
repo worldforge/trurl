@@ -1,0 +1,80 @@
+#! /usr/bin/env python
+
+import sys
+
+server = "irc.worldforge.org"
+port = 6667
+nick = "Trurl"
+channel = "#coders"
+new_topic = "[[ " + sys.argv[1] + " ]]"
+
+import irclib, re, socket, time
+
+try:
+    socket.getaddrinfo(server, port)
+except:
+    time.sleep(1)
+
+class DebugClient(irclib.SimpleIRCClient):
+
+    def _dispatcher(self, c, e):
+        """[Internal]"""
+        m = "on_" + e.eventtype()
+        print m
+        irclib.SimpleIRCClient._dispatcher(self, c, e)
+
+client = DebugClient()
+
+client.connect(server, port, nick)
+
+#client.connection.join("#trurl")
+#client.connection.privmsg("#trurl", "Foo")
+
+client.connection.join(channel)
+#client.connection.privmsg(channel, "Foo")
+def update_topic(conn, current_topic):
+    full_topic = ''
+    if re.search(r'\[\[.*\]\]', current_topic):
+        full_topic = re.sub(r'\[\[.*\]\]', new_topic, current_topic)
+    else:
+        if current_topic == '':
+            full_topic = new_topic
+        else:
+            full_topic = current_topic + ' ' + new_topic
+    if current_topic != full_topic:
+        client.connection.topic(channel, full_topic)
+    else:
+        conn.close()
+        sys.exit()
+#    print "current topic:", current_topic
+#    print "full topic:", full_topic
+topic = None
+def on_topic(conn, event):
+    global topic
+    if event.target() == nick and topic == None:
+        topic = event.arguments()[1]
+        update_topic(conn, topic)
+    else:
+        if topic != None and event.target() == channel:
+            conn.close()
+            sys.exit()
+def on_notopic(conn, event):
+    global topic
+    if event.target() == nick and topic == None:
+        topic = ''
+        update_topic(conn, topic)
+#client.on_topicinfo = on_topicinfo 
+client.on_topic = on_topic
+client.on_currenttopic = on_topic
+client.on_notopic = on_notopic
+client.connection.topic(channel)
+#client.connection.topic(channel)
+
+import signal
+def signal_exit(a, b):
+    sys.stderr.write("hook_irc: timeout\n")
+    sys.exit(1)
+signal.signal(signal.SIGALRM, signal_exit)
+signal.alarm(60)
+
+client.start()

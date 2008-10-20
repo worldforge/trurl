@@ -1,0 +1,35 @@
+
+div.halls {
+clear: both;
+float: right;
+}
+
+div.hall_of_fame, div.hall_of_confusion, div.hall_of_shame {
+border: 0.2em solid;
+padding: 0.2em;
+margin: 0.4em 0.2em;
+/*font-size: 0.7em;*/
+}
+div.hall_of_fame { 
+border-color: #f6eb1d /*yellow*/;
+}
+div.hall_of_shame {
+border-color: black;
+}
+div.hall_of_confusion {
+border-color: purple;
+}
+
+div.halls h1 {
+font-size: 1.5em;
+margin: 0;
+}
+.halls ul { margin: 0em 0em 0.3em 0em; }
+
+
+/*#other div.perfect {
+padding: 0.5em;
+text-align: right;
+margin: 0;
+}*/
+
