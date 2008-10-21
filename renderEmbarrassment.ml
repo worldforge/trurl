@@ -89,7 +89,7 @@ let render_embarassment ({ tm_module = project; tm_result = result; tm_revision 
                                let platform_logs = (List.hd tp_builds).tb_logs in
 	    str (* folded string *)
 	    ^ "<li class=\"" ^ (safe_string_of_result platform_result) ^ "\">\n"
-	    ^ "<img src=\"static/platforms/" ^ platform ^ platform_image_version_mistake ^ ".png\" alt=\"" ^ platform ^ "\" />" (*FIXME^ (time_as_gears_or_time time)*) ^ "\n" ^
+	    ^ "<img src=\"static/images/platforms/" ^ platform ^ platform_image_version_mistake ^ ".png\" alt=\"" ^ platform ^ "\" />" (*FIXME^ (time_as_gears_or_time time)*) ^ "\n" ^
 	      begin (* TODO: How do we give extensible knowledge of build-step sorting? *)
 (*	(List.map
 	  (fun (step, (result, log_filename, (*float,*) lines)) ->

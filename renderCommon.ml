@@ -43,7 +43,7 @@ let html_head ~ch ~file ~title =
     (if enable_debug_features then "Debug mode activated. This page will refresh every " ^ (if meta_refresh_interval = 10 then "ten" else Printf.sprintf "%i" meta_refresh_interval) ^ " seconds." else "")
     (List.fold_left
        (fun str (link, ext, title) ->
-          str ^ "<li><a href=\"" ^ link ^ "\">" ^ title ^ (if ext then " <img src=\"/trurl/static/external.png\" alt=\"external link\" />" else "") ^ "</a></li>"
+          str ^ "<li><a href=\"" ^ link ^ "\">" ^ title ^ (if ext then " <img src=\"/trurl/static/images/external.png\" alt=\"external link\" />" else "") ^ "</a></li>"
        ) "" (
       [
 	("http://www.worldforge.org/", true, "WorldForge");
@@ -60,7 +60,7 @@ let html_head ~ch ~file ~title =
 
 let html_foot ?(valid=true) ch =
   (if valid then
-     Printf.fprintf ch "<p>\n<a href=\"http://validator.w3.org/check?uri=referer\">\n<img style=\"border:0;width:88px;height:31px\" src=\"static/valid-xhtml11\" alt=\"Valid XHTML 1.1\" />\n</a>\n<a href=\"http://jigsaw.w3.org/css-validator/\">\n<img style=\"border:0;width:88px;height:31px\" src=\"static/vcss\" alt=\"Valid CSS!\" />\n</a>\n</p>\n");
+     Printf.fprintf ch "<p>\n<a href=\"http://validator.w3.org/check?uri=referer\">\n<img style=\"border:0;width:88px;height:31px\" src=\"static/images/valid-xhtml11\" alt=\"Valid XHTML 1.1\" />\n</a>\n<a href=\"http://jigsaw.w3.org/css-validator/\">\n<img style=\"border:0;width:88px;height:31px\" src=\"static/images/vcss\" alt=\"Valid CSS!\" />\n</a>\n</p>\n");
   Printf.fprintf ch "</body>\n</html>\n";
 ;;
 
@@ -88,7 +88,7 @@ let fmt' uptime =
 ;;
 
 let time_as_gears time =
-  (if time = None then "<img src=\"static/gears.png\" alt=\"building\" />" else "")
+  (if time = None then "<img src=\"static/images/gears.png\" alt=\"building\" />" else "")
 
 let time_as_gears_or_time (time : float option) =
   match time with
@@ -96,7 +96,7 @@ let time_as_gears_or_time (time : float option) =
     | None -> time_as_gears time
 
 let render_platform_images platforms =
-  (List.fold_left (fun str { tp_platform = platform; tp_result = result; tp_builds = builds; (*tp_time = time;*) (*tp_logs = logs*) } -> str ^ "<img src=\"static/platforms/" ^ platform ^ platform_image_version ^ ".png\" alt=\"" ^ platform ^ "\" />" (*^ (time_as_gears ((List.hd builds).tb_time))*)) "" platforms)
+  (List.fold_left (fun str { tp_platform = platform; tp_result = result; tp_builds = builds; (*tp_time = time;*) (*tp_logs = logs*) } -> str ^ "<img src=\"static/images/platforms/" ^ platform ^ platform_image_version ^ ".png\" alt=\"" ^ platform ^ "\" />" (*^ (time_as_gears ((List.hd builds).tb_time))*)) "" platforms)
 ;;
 
 let render_platform_gears platforms =

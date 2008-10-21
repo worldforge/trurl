@@ -60,7 +60,7 @@ let dump_module { tm_module = project; tm_result = tm_result; tm_platforms = pla
                 Printf.fprintf ch "</dd>";           
              ) platforms;
     dl' ();
-      Printf.fprintf ch "Build %s.%s" (safe_string_of_result tm_result) (if tm_result = Information then "<img src=\"static/star.png\" alt=\"star\" />" else "");
+      Printf.fprintf ch "Build %s.%s" (safe_string_of_result tm_result) (if tm_result = Information then "<img src=\"static/images/star.png\" alt=\"star\" />" else "");
 
       List.iter
         (fun { tp_platform = platform; tp_builds = tp_builds } ->
@@ -147,20 +147,20 @@ let frontpage (logs : tr_logs) (future : tr_snapshot option) =
       | Warning -> "warning", "Warning"
       | Information -> "ok", "Success"
       | Unknown -> "error", "Internal error"
-    in "<img src=\"static/" ^ img ^ ".png\"> " ^ text
+    in "<img src=\"static/images/" ^ img ^ ".png\"> " ^ text
   in
 
     Printf.fprintf ch "<p class=\"global builds\">\n";
 
     Printf.fprintf ch "<span class=\"previous\">%s</span>" (build_to_result previous); (* FIXME *)
-    Printf.fprintf ch "<img class=\"next\" src=\"static/next.png\">";
+    Printf.fprintf ch "<img class=\"next\" src=\"static/images/next.png\">";
     Printf.fprintf ch "<span class=\"current\">%s</span>" (build_to_result current);
     
     (match future with
          None -> ((*render_future []*))
        | Some future ->
-           Printf.fprintf ch "<img class=\"next\" src=\"static/next.png\">";
-           Printf.fprintf ch "<span class=\"future\">%s</span>" "<img src=\"static/in_progress.png\" /> <a href=\"future.html\">In progress</a>"; (* FIXME: link to a page *)
+           Printf.fprintf ch "<img class=\"next\" src=\"static/images/next.png\">";
+           Printf.fprintf ch "<span class=\"future\">%s</span>" "<img src=\"static/images/in_progress.png\" /> <a href=\"future.html\">In progress</a>"; (* FIXME: link to a page *)
            render_future future);
 
     Printf.fprintf ch "</p>\n";
@@ -204,9 +204,9 @@ let frontpage (logs : tr_logs) (future : tr_snapshot option) =
       end;
     ) (
       [
-	("hall_of_fame", "Successful<img src=\"static/star.png\" alt=\"star\" />", ((*if enable_debug_features then ("Fame", Information, []) :: ("Fame", Information, []) :: ("Fame", Information, []) :: ("Fame", Information, []) :: ("Fame", Information, []) :: fame else*) fame), fst4);
-	("hall_of_shame", "Hall of Shame<img src=\"static/bat.png\" alt=\"bat\" />", (((*if enable_debug_features then [("Shame", Error, []); ("Shame", Error, []); ("Shame", Error, []); ("Shame", Error, [])] else*) []) (* @ shame*)), fst4); (* move items here after 3 bats *)
-	("hall_of_confusion", "Hall of Confusion<img src=\"static/confused.png\" alt=\"confused\" />", (((*if enable_debug_features then [("Confusion", Unknown, []); ("Confusion", Unknown, []); ("Confusion", Unknown, []); ("Confusion", Unknown, [])] else*) []) @ confusion), fst4);
+	("hall_of_fame", "Successful<img src=\"static/images/star.png\" alt=\"star\" />", ((*if enable_debug_features then ("Fame", Information, []) :: ("Fame", Information, []) :: ("Fame", Information, []) :: ("Fame", Information, []) :: ("Fame", Information, []) :: fame else*) fame), fst4);
+(*	("hall_of_shame", "Hall of Shame<img src=\"static/images/bat.png\" alt=\"bat\" />", (((*if enable_debug_features then [("Shame", Error, []); ("Shame", Error, []); ("Shame", Error, []); ("Shame", Error, [])] else*) []) (* @ shame*)), fst4); (* move items here after 3 bats *)*)
+	("hall_of_confusion", "Hall of Confusion", confusion, fst4);
       ]);
   Printf.fprintf ch "</div>\n";
   (* Embarassing Mitsakes *)
