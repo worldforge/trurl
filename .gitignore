@@ -1,0 +1,10 @@
+.omakedb
+.omakedb.lock
+*.omc
+*~
+*.cm[io]
+*.annot
+trurl_build
+trurl_build.run
+trurl_render_log
+trurl_render_log.run
