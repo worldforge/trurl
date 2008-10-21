@@ -61,9 +61,8 @@ let sort_steps lst =
 let xml_escape_attribute = (* FIXME *)
   String.map (fun x -> match x with '+' -> '_' | _ -> x)
 
-let render_embarassment ({ tl_module = project; tl_result = result; tl_revisions = tl_revisions }
-                        : tr_log) =
-  let platforms = (List.hd tl_revisions).tr_platforms in
+let render_embarassment ({ tm_module = project; tm_result = result; tm_revision = tm_revision; tm_platforms = platforms }
+                        : tr_module) =
   let platforms_perfect, platforms_other =
       List.partition
 	(fun { tp_result = result }(*(platform, platform_result, logs)*) ->
@@ -120,37 +119,29 @@ let render_embarassment ({ tl_module = project; tl_result = result; tl_revisions
 (*    let fst3 (x, y, z) = (x ^ " " ^ (List.fold_left (fun str (platform, result) -> str ^ "<img src=\"platforms/" ^ platform ^ ".png\" />") "" z)) in*)
 ;;
 
-let render ch (*(list : tr_logs)*) (other : tr_logs) =
+let render ch (other : tr_module list) =
   (
     let (id, title, list, f) = (
       
-	("other", "Build problems<!--img src=\"embarassed.png\" alt=\"embarassed\" /-->", (* add 1 bat / week unfixed *)
-	((*if enable_debug_features then
-(*	  ("Perfect", Perfect, []) ::*)
-	    ("Unknown", Unknown, []) ::
-	    ("Information", Information, []) ::
-	    ("Error", Error, []) ::
-	    ("Dependency_error", Dependency_error, []) ::
-	    ("Warning", Warning, []) ::
-	      other else*) other), render_embarassment);
+	("other", "Build problems",
+	other, render_embarassment);
       )
     in
     (* sort list by result status *)
-    let list = AlertSort.sort_alert_high_to_low (fun { tl_module = a; tl_result = b } (*(a, b, _, c)*) -> a, b) list in
+    let list = AlertSort.sort_alert_high_to_low (fun { tm_module = a; tm_result = b } (*(a, b, _, c)*) -> a, b) list in
     match list with
       [] -> ()
-    | { tl_result = first_item_result } :: _ -> begin
+    | { tm_result = first_item_result } :: _ -> begin
 	(* extract first items result status *)
 	let previous_item_result = ref first_item_result in
 	  Printf.fprintf ch "<div class=\"%s\">\n<h1>%s</h1>\n" id title;
 	  List.iter
-	    (fun ({ tl_result = this_item_result; tl_module = id; tl_revisions = tl_revisions (*tl_builds = tl_builds*) }) ->
-               let platforms = (List.hd tl_revisions).tr_platforms in
+	    (fun ({ tm_result = this_item_result; tm_module = id; tm_platforms = platforms }) ->
 	       Printf.fprintf ch "<a class=\"%s\" href=\"#%s\">%s</a>%s\n" (safe_string_of_result this_item_result) (xml_escape_attribute id) id (render_platform_gears platforms);
 	    ) list;
 	  Printf.fprintf ch "<ul class=\"%s\">\n" (safe_string_of_result first_item_result);
 	  List.iter
-	    (fun ({ tl_result = this_item_result } as item) ->
+	    (fun ({ tm_result = this_item_result } as item) ->
 	       if this_item_result <> !previous_item_result then begin
 		 previous_item_result := this_item_result;
 		 Printf.fprintf ch "</ul>\n";

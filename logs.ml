@@ -870,7 +870,7 @@ let main () =
 	    platforms := { tp_platform = platform; tp_result = result; tp_builds = [ (* fixme *) { tb_host = "cat"; tb_time = (match find_timing logs with None -> 0.0 | Some x -> x); tb_start = Unix.gmtime 0.0; tb_result = result; tb_logs = logs; } ] (*tp_time = find_timing logs (* TIME FIXME *);*) (*tp_logs = logs*) } :: !platforms;
 	    acc_result := AlertSort.highest_alert !acc_result result;
 	  ) project_hash;
-	projects := { tl_module = project; tl_result = !acc_result; tl_revisions = (*fixme*) [ { tr_revision = CVS' (Unix.gmtime 0.0); tr_result = !acc_result; tr_platforms = !platforms; } ]; tl_repository = CVS ("n/a", "n/a"); tl_branch = ""; } :: !projects;
+	projects := { tm_module = project; tm_result = !acc_result; tm_revision = CVS { vc_repository = "fixme"; vc_path = "fixme"; vc_branch = "fixme"; vc_time = (Unix.gmtime 0.0); }; tm_platforms = !platforms } :: !projects;
       ) transform_target;
     in
       aux transform_target projects;
@@ -881,10 +881,17 @@ let main () =
   let transformed_logs, future =
     get_logs ()
   in
+  let snapshot_result logs = (List.fold_left AlertSort.highest_alert Unknown (List.map (fun { tm_result = result } -> result) logs)) in
+  let snapshots =
+    let current = { ts_snapshot = (1970, 01, 01, 001); ts_result = snapshot_result transformed_logs; ts_modules = transformed_logs } in
+    let previous = current (* FIXME *) in
+      [current; previous]
+  in
+  let future = match future with [] -> None | _ -> Some { ts_snapshot = (2100, 01, 01, 001); ts_result = snapshot_result future; ts_modules = future } in
 
-  Render.project_pages transformed_logs;
+  Render.project_pages snapshots;
 
-  Render.frontpage transformed_logs transformed_logs (match future with [] -> None | _ -> Some future);
+  Render.frontpage snapshots future;
 
   (* TODO:
      - Load map
@@ -894,10 +901,10 @@ let main () =
   *)
   let old_results = Results.load () in
   let new_results, changeset =
-    Results.merge old_results transformed_logs
+    Results.merge old_results snapshots
   in
     Results.save new_results;
-    Results.hooks changeset transformed_logs;
+    Results.hooks changeset snapshots;
 ;;
 
 main ()

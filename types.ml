@@ -50,7 +50,7 @@ type tr_platform = {
 }
 
 type vcs_cvs = { vc_repository : string; vc_path : string; vc_branch : string; vc_time : Unix.tm }
-type vcs_subversion = { vs_repository : string; vs_path : string; vc_revision : int }
+type vcs_subversion = { vs_repository : string; vs_path : string; vs_revision : int }
 type vcs_git = { vg_repository : string; vg_branch : string; vg_commit : string }
 type vcs = CVS of vcs_cvs | Subversion of vcs_subversion | Git of vcs_git
 (*type vcs_repository = CVS of (string * string) (* second is path inside repository *) | Subversion of (string * string) | Git of string
@@ -62,18 +62,11 @@ type vcs_revision = CVS' of Unix.tm (* Won't even try to track cvs revisions *) 
   tb_vcs : vcs * int
   tb_id : (int * int * int * int); (* year, month, day, build *)*)
 }*)
-type tr_module = { (*"Atlas-C++/0.5" Atlas-C++/HEAD *)
-  tm_module : string; (* constructed name: module/branch *)
-(*  tl_result : result;*)
-  tm_revision : vcs; (* repository (incl path), branch, revision *)
-(*  tm_branch : string;*)
-(*  tr_revision : vcs_revision;*)
+type tr_module = {
+  tm_module : string; (* constructed name: module/branch eg: Atlas-C++/0.5 Atlas-C++/HEAD; module = basename path or /($module).git *)
+  tm_revision : vcs;
   tm_result : result;
   tm_platforms : tr_platform list;
-(*  tl_revisions : tr_revision list;*)
-(*  tl_platforms : tr_platform list;*)
-(*  tl_time : float option;*)
-(*  tl_logfile : logfile;*)
 }
 type tr_snapshot = {
   ts_snapshot : (int * int * int * int); (* year, month, day, count *)

@@ -24,36 +24,31 @@ open RenderCommon
 let tm_to_string tv = Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour + 1) (tv.Unix.tm_min + 1) (tv.Unix.tm_sec + 1)
 ;;
 
-let dump_module { tl_module = project; tl_result = tl_result; tl_revisions (*tl_builds = tl_builds*) = tl_revisions; tl_repository = tl_repository; tl_branch = tl_branch; } ch =
-     let platforms = (List.hd tl_revisions).tr_platforms in
-      let pr title description = Printf.fprintf ch "<dt>%s</dt>\n<dd>%s</dd>\n" title description in
-      Printf.fprintf ch "<div class=\"%s\">" (safe_string_of_result tl_result);
-      Printf.fprintf ch "<h1>%s</h1>" project;
-      Printf.fprintf ch "<dl>";
-      Printf.fprintf ch "<dt>%s</dt>" "Repository";
-      Printf.fprintf ch "<dd>%s</dd>" (match tl_repository with CVS (root, path) -> "CVS: " ^ root ^ " using path " ^ path | Subversion (root, path) -> "SVN: " ^ root ^ " using path " ^ path | Git origin -> "Git: " ^ origin);
-      Printf.fprintf ch "<dt>%s</dt>" "Branch";
-      Printf.fprintf ch "<dd>%s</dd>" tl_branch;
-      pr "Result" (safe_string_of_result tl_result);
-      Printf.fprintf ch "<dt>%s</dt>" "Revisions";
-      List.iter
-        (fun { tr_revision = tr_revision; tr_platforms = tr_platforms; tr_result = tr_result; } ->
-           Printf.fprintf ch "<dd>";
-           Printf.fprintf ch "<dl>";
-           pr "Revision" (match tr_revision with CVS' time -> "CVS at time " ^ (tm_to_string time) | Subversion' rev -> "SVN: r" ^ (string_of_int rev) | Git' commit -> "Git: " ^ commit);
-           pr "Result" (safe_string_of_result tr_result);
-           Printf.fprintf ch "<dt>%s</dt>" "Platforms";
-           List.iter
+let dump_module { tm_module = project; tm_result = tm_result; tm_platforms = platforms; tm_revision = tm_revision; } ch =
+  let pr title description = Printf.fprintf ch "<dt>%s</dt>\n<dd>%s</dd>\n" title description in
+  let dl result = Printf.fprintf ch "<dl class=\"%s\">" (safe_string_of_result result) in
+  let dl' () = Printf.fprintf ch "</dl>" in
+    Printf.fprintf ch "<div class=\"%s\">" (safe_string_of_result tm_result);
+    Printf.fprintf ch "<h1>%s</h1>" project;
+    dl tm_result;
+    Printf.fprintf ch "<dt>%s</dt>" "Revision";
+    Printf.fprintf ch "<dd>%s</dd>"
+      (match tm_revision with CVS cvs -> "CVS: " ^ cvs.vc_repository ^ " using path " ^ cvs.vc_path ^ " and branch " ^ cvs.vc_branch ^ " at time " ^ (tm_to_string cvs.vc_time)
+	 | Subversion svn -> "SVN: " ^ svn.vs_repository ^ " using path " ^ svn.vs_path ^ " at r" ^ (string_of_int svn.vs_revision)
+	 | Git git -> "Git: " ^ git.vg_repository ^ " using branch " ^ git.vg_branch ^ " at commit " ^ git.vg_commit);
+    pr "Result" (safe_string_of_result tm_result);
+    Printf.fprintf ch "<dt>%s</dt>" "Revisions";
+    List.iter
              (fun { tp_platform = tp_platform; tp_result = tp_result; tp_builds = tp_builds; } ->
                 Printf.fprintf ch "<dd>";
-                Printf.fprintf ch "<dl>";
+                dl tp_result;
                 pr "Platform" tp_platform;
                 pr "Result" (safe_string_of_result tp_result);
                 Printf.fprintf ch "<dt>%s</dt>" "Builds";
                 List.iter
                   (fun { tb_host = tb_host; tb_time = tb_time; tb_start = tb_start; tb_result = tb_result; } ->
                 Printf.fprintf ch "<dd>";
-                Printf.fprintf ch "<dl>";
+                     dl tb_result;
                      pr "Host" tb_host;
                      pr "Start" (tm_to_string tb_start);
                      pr "Time" (RenderCommon.fmt' tb_time);
@@ -63,12 +58,9 @@ let dump_module { tl_module = project; tl_result = tl_result; tl_revisions (*tl_
                   ) tp_builds;
                 Printf.fprintf ch "</dl>";
                 Printf.fprintf ch "</dd>";           
-             ) tr_platforms;
-           Printf.fprintf ch "</dl>";
-           Printf.fprintf ch "</dd>";
-        ) tl_revisions;
-      Printf.fprintf ch "</dl>";
-      Printf.fprintf ch "Build %s.%s" (safe_string_of_result tl_result) (if tl_result = Information then "<img src=\"static/star.png\" alt=\"star\" />" else "");
+             ) platforms;
+    dl' ();
+      Printf.fprintf ch "Build %s.%s" (safe_string_of_result tm_result) (if tm_result = Information then "<img src=\"static/star.png\" alt=\"star\" />" else "");
 
       List.iter
         (fun { tp_platform = platform; tp_builds = tp_builds } ->
@@ -86,7 +78,7 @@ let dump_module { tl_module = project; tl_result = tl_result; tl_revisions (*tl_
 (* Project pages *)
 let project_pages (logs : tr_logs) =
   List.iter
-    (fun ({ tl_module = project; tl_result = tl_result; tl_revisions (*tl_builds = tl_builds*) = tl_revisions; tl_repository = tl_repository; tl_branch = tl_branch; } as m) ->
+    (fun ({ tm_module = project; tm_result = tm_result; tm_platforms = tm_platforms; tm_revision = tm_revision; } as m) ->
       let ch = open_out (Filename.concat target_dir (project_url project)) in
       html_head ~ch ~file:(project_url project) ~title:project;
       Printf.fprintf ch "<div class=\"other\">";
@@ -94,10 +86,10 @@ let project_pages (logs : tr_logs) =
       Printf.fprintf ch "</div>";
       html_foot ch;
       close_out ch;
-    ) logs
+    ) (List.hd logs).ts_modules
 ;;
 
-let render_future (logs : tr_logs) =
+let render_future (logs : tr_snapshot) =
   let ch = open_out (Filename.concat target_dir ("future.html")) in
     html_head ~ch ~file:("future.html") ~title:"Future";
     Printf.fprintf ch "<div class=\"other\">";
@@ -105,7 +97,7 @@ let render_future (logs : tr_logs) =
     List.iter
       (fun m ->
          dump_module m ch;
-      ) logs;
+      ) logs.ts_modules;
   Printf.fprintf ch "</div>";
   html_foot ch;
   close_out ch;
@@ -124,11 +116,9 @@ let in_progressP (logs : tr_logs) =
 ;;
 *)
 
-let frontpage (transformed_logs : tr_logs(*
-(string * LogsTypes.result * LogsTypes.special option *
-   (string * LogsTypes.result * LogsTypes.logs) list)
-  list*)
-) (previous : tr_logs) (future : tr_logs option) =
+let frontpage (logs : tr_logs) (future : tr_snapshot option) =
+  let previous = List.hd (List.tl logs) in
+  let current = List.hd logs in
   (* Main page *)
   (* dump support *)
   let ch = open_out (Filename.concat target_dir "action.php") in
@@ -138,69 +128,20 @@ let frontpage (transformed_logs : tr_logs(*
   let ch = open_out (Filename.concat target_dir "index.php") in
   html_head ~ch ~file:"index.html" ~title:"Frontpage";
     Printf.fprintf ch "<?php require_once('static/trurl.php');  trurl_global_state(%s); ?>\n" (if future = None then "false" else "true");
-(*    begin
-      let render_time { Unix.tm_year = year; tm_mon = month; tm_mday = day; tm_hour = hour; tm_min = minute } =
-	Printf.sprintf "%04i-%02i-%02i %02i:%02i UTC" (1900 + year) month day hour minute
-      in
-      let render_js_time_ago time =
-	Printf.sprintf
-	  "<script type=\"text/javascript\">
-<!--
-now = new Date( );
-last = new Date( %f * 1000 );
-
-diff = (now.getTime( ) + (now.getTimezoneOffset( ) * 60 * 1000)) - last.getTime( );
-diff_days = Math.floor( diff / 1000 / 60 / 60 / 24 );
-diff_hours = Math.floor((diff / 1000 / 60 / 60) - (diff_days * 24));
-diff_minutes = Math.floor((diff / 1000 / 60) - (diff_hours * 60) - (diff_days * 24 * 60));
-
-document.write('; ');
-if (diff_days > 0) {
-  document.write(diff_days + 'd ');
-}
-document.write(diff_hours + 'h ');
-document.write(diff_minutes + 'm ago.');
--->
-</script>" time
-      in
-      let render_stat_mtime file =
-	let { Unix.st_mtime = mtime } = Unix.stat file; in
-	let mtime = Unix.gmtime (mtime) in
-	let utc_mtime = fst (Unix.mktime mtime (*-. 3600.0 (* TODO: daylight dst. *)*)) in
-	  (render_time mtime ^ render_js_time_ago utc_mtime)
-      in
-      Printf.fprintf ch "<dl class=\"time\">\n";
-        Printf.fprintf ch "<dt>CVS last checked</dt>\n";
-        Printf.fprintf ch "<dd>%s</dd>\n" (render_stat_mtime "cvs.forge.update");
-      Printf.fprintf ch "<dt>git last checked</dt>\n";
-      Printf.fprintf ch "<dd>%s</dd>\n" (render_stat_mtime "git.ember.update");
-      Printf.fprintf ch "<dt>Build last started</dt>\n";
-      Printf.fprintf ch "<dd>%s</dd>\n" (render_stat_mtime "timestamp_latest_build");
-      Printf.fprintf ch "</dl>\n";
-    end;*)
-
-(*  let transformed_logs =
-    List.map (* PONDER XXX: For now Information == Perfect; UPDATE: now information *is* perfect *)
-      (fun (a, (c1 : result), b) ->
-	a, (match c1 with
-	  Information -> Perfect
-	| x -> x), b
-      ) transformed_logs
-  in*)
   let fame, other =
     List.partition
-      (fun { tl_result = c1 } (*(_, (c1 : result), _, _)*) ->
+      (fun { tm_result = c1 } (*(_, (c1 : result), _, _)*) ->
 	match c1 with
 (*	| Perfect*)
 	| Information
 	  -> true
 	| Error	| Dependency_error | Warning | Unknown
 	    -> false
-      ) transformed_logs
+      ) current.ts_modules
   in
-  let build_to_result logs =
+  let build_to_result snapshot =
     let img, text =
-      match List.fold_left AlertSort.highest_alert Unknown (List.map (fun { tl_result = x } -> x ) logs) with
+      match snapshot.ts_result with
         Error -> "error", "Error"
       | Dependency_error -> "error", "Error (dependency)"
       | Warning -> "warning", "Warning"
@@ -211,12 +152,12 @@ document.write(diff_minutes + 'm ago.');
 
     Printf.fprintf ch "<p class=\"global builds\">\n";
 
-    Printf.fprintf ch "<span class=\"previous\">%s</span>" (build_to_result previous);
+    Printf.fprintf ch "<span class=\"previous\">%s</span>" (build_to_result previous); (* FIXME *)
     Printf.fprintf ch "<img class=\"next\" src=\"static/next.png\">";
-    Printf.fprintf ch "<span class=\"current\">%s</span>" (build_to_result transformed_logs);
+    Printf.fprintf ch "<span class=\"current\">%s</span>" (build_to_result current);
     
     (match future with
-         None -> (render_future [])
+         None -> ((*render_future []*))
        | Some future ->
            Printf.fprintf ch "<img class=\"next\" src=\"static/next.png\">";
            Printf.fprintf ch "<span class=\"future\">%s</span>" "<img src=\"static/in_progress.png\" /> <a href=\"future.html\">In progress</a>"; (* FIXME: link to a page *)
@@ -227,7 +168,7 @@ document.write(diff_minutes + 'm ago.');
   debug_endline (Printf.sprintf "Fame: %i (%i other)" (List.length fame) (List.length other));
   let confusion, other =
     List.partition
-      (fun { tl_result = c1 } (*(_, (c1 : result), _, _)*) ->
+      (fun { tm_result = c1 } (*(_, (c1 : result), _, _)*) ->
 	match c1 with
 (*	| Perfect*)
 	| Information
@@ -245,9 +186,7 @@ document.write(diff_minutes + 'm ago.');
 (*  let fst3 (project, _ (*result*), platforms) =
     "<li>" ^ ((href_of_project project) ^ " " ^ (render_platform_images platforms)) ^ "</li>"
   in*)
-  let fst4 { tl_module = project; (*tl_time = special;*) tl_revisions = tl_revisions }
- (*(project, _ (*result*), special, platforms)*) =
-     let platforms = (List.hd tl_revisions).tr_platforms in
+  let fst4 { tm_module = project; (*tl_time = special;*) tm_platforms = platforms } =
     "<li>" ^ ((href_of_project project) (*^ (match special with None -> "" | Some _ -> " (building)")*) ^ " " ^ (render_platform_images platforms)) ^ "</li>"
   in
   Printf.fprintf ch "<div class=\"halls\">\n";
