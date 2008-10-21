@@ -161,6 +161,11 @@ margin: 0;
   padding-left: 0.3em;
   }
 
+.unknown { border-color: #d3d3d3; }
+.information { border-color: #00ffff; }
+.warning { border-color: #ffa500; }
+.error { border-color: #ff4d4d; }
+
 a.error,
 a.dependency_error,
 a.warning,
