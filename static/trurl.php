@@ -31,12 +31,12 @@ function trurl_eta() {
 function trurl_finished_buttons() {
   echo "<form action=\"action.php\" method=\"post\">";
   echo "<button class=\"button\" type=\"submit\" name=\"force_build\" value=\"Force rebuild\">";
-  echo "<img src=\"static/building-16x16.png\" />";
+  echo "<img src=\"static/images/building-16x16.png\" />";
   echo "Force rebuild</button>";
   echo "</form>";
   echo "<form action=\"action.php\" method=\"post\">";
   echo "<button class=\"button\" type=\"submit\" name=\"force_poll\" value=\"Force poll\">";
-  echo "<img src=\"static/updating-16x16.png\" />";
+  echo "<img src=\"static/images/updating-16x16.png\" />";
   echo "Force poll</button>";
   echo "</form>";
 }
@@ -67,31 +67,31 @@ function trurl_global_state($building) {
   echo "<p class=\"global state\">";
   switch ($state) {
     case 'build':
-      echo "<img src=\"static/building.png\" /> Building</p>\n";
+      echo "<img src=\"static/images/building.png\" /> Building</p>\n";
       echo "<p class=\"global eta\">"; /* trurl_eta(); */ echo "0/1 platforms finished.</p>\n";
       // XXX abort build (combine with force command?)
       echo "<p class=\"global buttons\">";
   echo "<form action=\"action.php\" method=\"post\">";
   echo "<button class=\"button\" type=\"submit\" name=\"force_build\" value=\"Force rebuild\">";
-  echo "<img src=\"static/building-16x16.png\" />";
+  echo "<img src=\"static/images/building-16x16.png\" />";
   echo "Queue forced rebuild</button>";
   echo "</form>";
   echo "<form action=\"action.php\" method=\"post\">";
   echo "<button class=\"button\" type=\"submit\" name=\"force_poll\" value=\"Force poll\">";
-  echo "<img src=\"static/updating-16x16.png\" />";
+  echo "<img src=\"static/images/updating-16x16.png\" />";
   echo "Queue forced poll</button>";
   echo "</form>";
       echo "</p>\n";
       break;
     case 'update':
-      echo "<img src=\"static/updating.png\" /> Updating</p>\n";
+      echo "<img src=\"static/images/updating.png\" /> Updating</p>\n";
       echo "<p class=\"global eta\">"; /* trurl_eta(); */ echo "&nbsp;</p>\n";
       echo "<p class=\"global buttons\">"; trurl_finished_buttons(); echo "</p>\n";
       break;
     default:
-      echo "<img src=\"static/internal_error.png\" />";
+      echo "<img src=\"static/images/internal_error.png\" />";
     case 'idle':
-      echo "<img src=\"static/finished.png\" /> Finished</p>\n";
+      echo "<img src=\"static/images/finished.png\" /> Finished</p>\n";
       echo "<p class=\"global eta\">"; trurl_eta(); echo "</p>\n";
       echo "<p class=\"global buttons\">"; trurl_finished_buttons(); echo "</p>\n";
       break;

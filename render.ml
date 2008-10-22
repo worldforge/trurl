@@ -139,6 +139,9 @@ let frontpage (logs : tr_logs) (future : tr_snapshot option) =
 	    -> false
       ) current.ts_modules
   in
+  let string_of_snapshot (year, month, day, build) =
+    Printf.sprintf "<span class=\"snapshot\">[<a href=\"#\">%04i.%02i.%02i-%03i</a>]</span>" year month day build
+  in
   let build_to_result snapshot =
     let img, text =
       match snapshot.ts_result with
@@ -147,23 +150,23 @@ let frontpage (logs : tr_logs) (future : tr_snapshot option) =
       | Warning -> "warning", "Warning"
       | Information -> "ok", "Success"
       | Unknown -> "error", "Internal error"
-    in "<img src=\"static/images/" ^ img ^ ".png\"> " ^ text
+    in "<img src=\"static/images/" ^ img ^ ".png\"> <div>" ^ text ^ "<br />" ^ (string_of_snapshot snapshot.ts_snapshot) ^ "</div>"
   in
 
-    Printf.fprintf ch "<p class=\"global builds\">\n";
+    Printf.fprintf ch "<div class=\"global builds\">\n";
 
-    Printf.fprintf ch "<span class=\"previous\">%s</span>" (build_to_result previous); (* FIXME *)
+    Printf.fprintf ch "<div class=\"previous\">%s</div>" (build_to_result previous); (* FIXME *)
     Printf.fprintf ch "<img class=\"next\" src=\"static/images/next.png\">";
-    Printf.fprintf ch "<span class=\"current\">%s</span>" (build_to_result current);
+    Printf.fprintf ch "<div class=\"current\">%s</div>" (build_to_result current);
     
     (match future with
          None -> ((*render_future []*))
        | Some future ->
            Printf.fprintf ch "<img class=\"next\" src=\"static/images/next.png\">";
-           Printf.fprintf ch "<span class=\"future\">%s</span>" "<img src=\"static/images/in_progress.png\" /> <a href=\"future.html\">In progress</a>"; (* FIXME: link to a page *)
+           Printf.fprintf ch "<div class=\"future\">%s</div>" "<img src=\"static/images/in_progress.png\" /> <a href=\"future.html\">In progress</a>"; (* FIXME: link to a page *)
            render_future future);
 
-    Printf.fprintf ch "</p>\n";
+    Printf.fprintf ch "<div class=\"clear\"></div></div>\n";
 
   debug_endline (Printf.sprintf "Fame: %i (%i other)" (List.length fame) (List.length other));
   let confusion, other =
