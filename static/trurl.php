@@ -28,6 +28,29 @@ function trurl_eta() {
   echo "$eta minutes until next poll.";
 }
 
+function trurl_last() {
+  $eta = 0;
+  /*  file_mtime("cvs.forge.update")
+    file_mtime("git.ember.update");
+      Printf.fprintf ch "<dt>Build last started</dt>\n";
+      Printf.fprintf ch "<dd>%s</dd>\n" (render_stat_mtime "timestamp_latest_build");*/
+  $last = filemtime("/home/trurl/work/timestamp_latest_build");
+  $delta = (time() - $last);
+  $days = $delta / (24 * 60 * 60);
+  if (floor($days)) {
+    echo round($days, $days > 2 ? 0 : 1) . " days";
+  } else {
+    $hours = $delta / (60 * 60);
+    if (floor($hours)) {
+      echo round($hours, $hours > 2 ? 0 : 1) . " hours";
+    } else {
+      $minutes = $delta / (60);
+      echo round($minutes, $minutes > 2 ? 0 : 1) . " minutes";
+    }
+  }
+  echo " since last build.";
+}
+
 function trurl_finished_buttons() {
   echo "<form action=\"action.php\" method=\"post\">";
   echo "<button class=\"button\" type=\"submit\" name=\"force_build\" value=\"Force rebuild\">";
@@ -85,14 +108,14 @@ function trurl_global_state($building) {
       break;
     case 'update':
       echo "<img src=\"static/images/updating.png\" /> Updating</p>\n";
-      echo "<p class=\"global eta\">"; /* trurl_eta(); */ echo "&nbsp;</p>\n";
+      echo "<p class=\"global eta\">"; /* trurl_eta(); */ trurl_last(); /*echo "&nbsp;";*/ echo "</p>\n";
       echo "<p class=\"global buttons\">"; trurl_finished_buttons(); echo "</p>\n";
       break;
     default:
       echo "<img src=\"static/images/internal_error.png\" />";
     case 'idle':
       echo "<img src=\"static/images/finished.png\" /> Finished</p>\n";
-      echo "<p class=\"global eta\">"; trurl_eta(); echo "</p>\n";
+      echo "<p class=\"global eta\">"; trurl_last(); echo "</p>\n";
       echo "<p class=\"global buttons\">"; trurl_finished_buttons(); echo "</p>\n";
       break;
   }
