@@ -739,6 +739,7 @@ let main () =
 
   Render.project_pages snapshots;
 
+  Render.snapshots snapshots;
   Render.frontpage snapshots;
 
   let old_results = Results.load () in

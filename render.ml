@@ -102,6 +102,53 @@ let project_pages (logs : tr_logs) =
     ) (List.hd logs).ts_modules
 ;;
 
+let string_of_snapshot (year, month, day, build) =
+  let snapshot = Printf.sprintf "%04i.%02i.%02i-%03i" year month day build in
+    Printf.sprintf "<span class=\"snapshot\">[<a href=\"snapshot-%s.html\">%s</a>]</span>" snapshot snapshot
+;;
+
+let html_of_snapshot ?(current=false) snapshot =
+  let img, text =
+    match snapshot.ts_result with
+        Error -> "error", "Error"
+      | Dependency_error -> "error", "Error (dependency)"
+      | Warning -> "warning", "Warning"
+      | Information -> "ok", "Success"
+      | Unknown -> "error", "Internal error"
+  in
+    (if current then "<div class=\"current\">" else "<div>") ^
+      "<img src=\"static/images/" ^ img ^ ".png\"> <div>" ^ text ^ "<br />" ^ (string_of_snapshot snapshot.ts_snapshot) ^ "</div>" ^
+      "</div>"
+;;
+
+let render_snapshot ch ({ ts_snapshot = (year, month, day, build); } as snapshot) past future =
+  let snapshot_name = Printf.sprintf "%04i.%02i.%02i-%03i" year month day build in
+  let next () = Printf.fprintf ch "<img class=\"next\" src=\"static/images/next.png\" />" in
+    RenderCommon.html_head ~ch ~file:"" ~title:snapshot_name;
+    Printf.fprintf ch "<div class=\"global builds\">\n";
+    List.iter (fun snap -> output_string ch (html_of_snapshot snap); next ()) past;
+    output_string ch (html_of_snapshot ~current:true snapshot);
+    List.iter (fun snap -> next (); output_string ch (html_of_snapshot snap)) future;
+    Printf.fprintf ch "</div><div class=\"clear\"></div>\n";
+    RenderCommon.html_foot ch;
+;;
+
+let snapshots (logs : tr_logs) =
+  let rec part past future =
+    match past with
+	hd :: tl ->
+	  (fun ({ ts_snapshot = (year, month, day, build); } as snapshot) ->
+	     let snapshot_name = Printf.sprintf "%04i.%02i.%02i-%03i" year month day build in
+	     let snapshot_channel = open_out (Filename.concat target_dir ("snapshot-" ^ snapshot_name ^ ".html")) in
+	       render_snapshot snapshot_channel snapshot (List.rev tl) future;
+	       close_out snapshot_channel;
+	  ) hd;
+	  part tl (hd :: future)
+      | [] -> ()
+  in
+    part logs []
+;;
+
 let frontpage (logs : tr_logs) =
   let previous = List.hd (List.tl logs) in
   let current = List.hd logs in
@@ -125,25 +172,12 @@ let frontpage (logs : tr_logs) =
 	    -> false
       ) current.ts_modules
   in
-  let string_of_snapshot (year, month, day, build) =
-    Printf.sprintf "<span class=\"snapshot\">[<a href=\"#\">%04i.%02i.%02i-%03i</a>]</span>" year month day build
-  in
-  let build_to_result snapshot =
-    let img, text =
-      match snapshot.ts_result with
-        Error -> "error", "Error"
-      | Dependency_error -> "error", "Error (dependency)"
-      | Warning -> "warning", "Warning"
-      | Information -> "ok", "Success"
-      | Unknown -> "error", "Internal error"
-    in "<img src=\"static/images/" ^ img ^ ".png\"> <div>" ^ text ^ "<br />" ^ (string_of_snapshot snapshot.ts_snapshot) ^ "</div>"
-  in
 
     Printf.fprintf ch "<div class=\"global builds\">\n";
 
-    Printf.fprintf ch "<div class=\"previous\">%s</div>" (build_to_result previous); (* FIXME *)
+    Printf.fprintf ch "%s" (html_of_snapshot previous); (* FIXME *)
     Printf.fprintf ch "<img class=\"next\" src=\"static/images/next.png\">";
-    Printf.fprintf ch "<div class=\"current\">%s</div>" (build_to_result current);
+    Printf.fprintf ch "%s" (html_of_snapshot ~current:true current);
     
     Printf.fprintf ch "<div class=\"clear\"></div></div>\n";
 
