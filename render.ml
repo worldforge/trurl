@@ -102,34 +102,7 @@ let project_pages (logs : tr_logs) =
     ) (List.hd logs).ts_modules
 ;;
 
-let render_future (logs : tr_snapshot) =
-  let ch = open_out (Filename.concat target_dir ("future.html")) in
-    html_head ~ch ~file:("future.html") ~title:"Future";
-    Printf.fprintf ch "<div class=\"other\">";
-    Printf.fprintf ch "<h1>%s</h1>" "In Progress";
-    List.iter
-      (fun m ->
-         dump_module m ch;
-      ) logs.ts_modules;
-  Printf.fprintf ch "</div>";
-  html_foot ch;
-  close_out ch;
-;;
-
-(*
-let in_progressP (logs : tr_logs) =
-  Sys.file_exists "force/build" ||
-  List.fold_left
-    (fun in_progress module_ ->
-       List.fold_left
-         (fun in_progress platform ->
-            in_progress || platform.tp_time = None
-         ) in_progress (List.hd module_.tl_builds).tb_platforms
-    ) false logs
-;;
-*)
-
-let frontpage (logs : tr_logs) (future : tr_snapshot option) =
+let frontpage (logs : tr_logs) =
   let previous = List.hd (List.tl logs) in
   let current = List.hd logs in
   (* Main page *)
@@ -140,7 +113,7 @@ let frontpage (logs : tr_logs) (future : tr_snapshot option) =
   (* dump glance *)
   let ch = open_out (Filename.concat target_dir "index.php") in
   html_head ~ch ~file:"index.html" ~title:"Frontpage";
-    Printf.fprintf ch "<?php require_once('static/trurl.php');  trurl_global_state(%s); ?>\n" (if future = None then "false" else "true");
+    Printf.fprintf ch "<?php require_once('static/trurl.php');  trurl_global_state(); ?>\n";
   let fame, other =
     List.partition
       (fun { tm_result = c1 } (*(_, (c1 : result), _, _)*) ->
@@ -172,13 +145,6 @@ let frontpage (logs : tr_logs) (future : tr_snapshot option) =
     Printf.fprintf ch "<img class=\"next\" src=\"static/images/next.png\">";
     Printf.fprintf ch "<div class=\"current\">%s</div>" (build_to_result current);
     
-    (match future with
-         None -> ((*render_future []*))
-       | Some future ->
-           Printf.fprintf ch "<img class=\"next\" src=\"static/images/next.png\">";
-           Printf.fprintf ch "<div class=\"future\">%s</div>" "<img src=\"static/images/in_progress.png\" /> <a href=\"future.html\">In progress</a>"; (* FIXME: link to a page *)
-           render_future future);
-
     Printf.fprintf ch "<div class=\"clear\"></div></div>\n";
 
   debug_endline (Printf.sprintf "Fame: %i (%i other)" (List.length fame) (List.length other));

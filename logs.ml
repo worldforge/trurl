@@ -739,14 +739,8 @@ let main () =
 
   Render.project_pages snapshots;
 
-  Render.frontpage snapshots None (*FIXMEfuture*);
+  Render.frontpage snapshots;
 
-  (* TODO:
-     - Load map
-     - compare against current and make a changeset
-     - Save map
-     - fork() hooks to select state changes
-  *)
   let old_results = Results.load () in
   let new_results, changeset =
     Results.merge old_results snapshots
