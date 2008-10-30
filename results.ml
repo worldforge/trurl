@@ -184,6 +184,9 @@ let hooks changeset (transformed_logs : tr_logs) =
       acc [] [] [] latest_modules (* XXX probably wrong as we actually want the full list of latest results *)
     in
     let errors, deperrors, warnings =
+      List.sort errors, List.sort deperrors, List.sort warnings
+    in
+    let errors, deperrors, warnings =
       List.fold_left
         (fun a b ->
            a ^ " " ^ b
