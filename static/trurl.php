@@ -69,12 +69,9 @@ function trurl_string_begins_with($haystack, $needle)
     return (strncmp($haystack, $needle, strlen($needle)) == 0);
 }
 
-function trurl_global_state($building) {
-  $building = $building;
-  if ($building) {
-    $state = 'build';
-  } else if (file_exists("/home/trurl/work/force/build") || file_exists("/home/trurl/work/force/update")) {
-      $state = 'update';    
+function trurl_global_state() {
+  if (file_exists("/home/trurl/work/force/build") || file_exists("/home/trurl/work/force/update")) {
+    $state = 'update';    
   } else {
     $state = 'idle';
   }
