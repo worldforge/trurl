@@ -22,6 +22,26 @@
 open Types;;
 open Config;;
 
+let find_special (logs : logfile list) =
+  let rec aux lst =
+    match lst with
+        [] -> None
+      | { f_special = hd } :: tl ->
+          match hd with
+              None -> aux tl
+            | Some _ -> hd
+  in aux logs
+;;
+
+let find_timing logs =
+  match find_special logs with
+      None -> None
+    | Some Timing x -> Some x
+;;
+
+let fold_result l = (List.fold_left AlertSort.highest_alert Unknown) l;;
+let fold_result' f l = fold_result (List.map f l);;
+
 let list_find_map (f : 'a -> 'b option) (lst : 'a list) : 'b =
   match
     List.find
@@ -43,84 +63,6 @@ let partial =
   | Invalid_argument "index out of bounds" -> false
 ;;
 
-(*type status = Error | Warning | Dependency_error | Good | Don't_care | Not_our_fault | Induced_warning | Add | Delete | Time_begin | Time_end | Unmatched
-type result = Failed | Unsatisfied_dependencies | Warned | Known_error | Probably_ok | Perfect | Information | Unknown*)
-
-(*let safe_string_of_status s =
-  match s with
-    Error -> "error"
-  | Warning -> "warning"
-  | Dependency_error -> "dependency_error"
-  | Good -> "good"
-  | Don't_care -> "dont_care"
-  | Not_our_fault -> "not_our_fault"
-  | Induced_warning -> "induced_warning"
-  | Add -> "add"
-  | Delete -> "delete"
-  | Time_begin -> "time_begin"
-  | Time_end -> "time_end"
-  | Unmatched -> "unmatched"*)
-
-(*
-let green, yellow, red, gray, brown, blue =
-  "#11DD11", "yellow", "red", "gray", "brown", "blue";;
-
-let color_of_status s =
-  match s with
-    Error -> red
-  | Warning -> yellow
-  | Dependency_error -> brown
-  | Good -> green
-  | Don't_care -> blue
-  | Not_our_fault -> brown
-  | Induced_warning -> brown
-  | Add -> green
-  | Delete -> red
-  | Time_begin -> blue
-  | Time_end -> blue
-  | Unmatched -> gray
-*)
-(*let color_of_result r =
-  match r with
-    Failed -> red
-  | Unsatisfied_dependencies -> brown
-  | Warned -> green
-  | Known_error -> blue
-  | Probably_ok -> green
-  | Perfect -> green
-  | Information -> blue
-  | Unknown -> gray
-*)
-(*let nstring_of_status s =
-  match s with
-    Error -> "Error"
-  | Warning -> "Warning"
-  | Dependency_error -> "Dependency error"
-  | Good -> "Good"
-  | Don't_care -> "Don't care"
-  | Not_our_fault -> "Not our fault"
-  | Induced_warning -> "Induced warning"
-  | Add -> "Add"
-  | Delete -> "Delete"
-  | Time_begin -> "Time begin"
-  | Time_end -> "Time end"
-  | Unmatched -> "Unmatched"
-
-let nresult_of_status s =
-  match s with
-    Error -> "Error"
-  | Warning -> "Warning"
-  | Dependency_error -> "Dependency error"
-  | Good -> "Good"
-  | Don't_care -> "Don't care"
-  | Not_our_fault -> "Not our fault"
-  | Induced_warning -> "Induced warning"
-  | Add -> "Add"
-  | Delete -> "Delete"
-  | Time_begin -> "Time begin"
-  | Time_end -> "Time end"
-  | Unmatched -> "Unmatched"
-*)
 let iter_pair f lst =
   List.iter
     (fun (x,y) -> f x y)
@@ -129,70 +71,31 @@ let iter_pair f lst =
 
 let build_module_page () = ()
 let build_module_date_page () = ()
-(*
-type color = [`green | `yellow | `red | `gray | `brown | `blue]
-let render_color c =
-  match c with
-    `green -> green
-  | `yellow -> yellow
-  | `red -> red
-  | `gray -> gray
-  | `brown -> brown
-  | `blue -> blue
-;;
-let contrast c =
-  match c with
-    `green -> "black"
-  | `yellow -> "black"
-  | `red -> "white"
-  | `gray -> "black"
-  | `brown -> "white"
-  | `blue -> "white"
-let logcolor_class c =
-  match c with
-    `green -> "green"
-  | `yellow -> "yellow"
-  | `red -> "red"
-  | `gray -> "gray"
-  | `brown -> "brown"
-  | `blue -> "blue"
-*)
+
 let logfile_missing = Unknown, "no log";;
 
 let fn_cat lst = List.fold_left Filename.concat "" lst;;
 
 
 let handlers : (string, cb:Parsers.callbacks -> string -> result) Hashtbl.t = Hashtbl.create 16;;
-(*iter_pair
-  (Hashtbl.add handlers)
-  [
-    "timing", Parsers.parse_timing;
-  ];;
-*)
+
 exception PCDATA;;
 begin try
   let rule_hash = Hashtbl.create 16 in
   let get_element node = match node with Xml.Element x -> x | Xml.PCData _ -> raise PCDATA in
-  (*  iter_pair*)
   begin
     let rules = Xml.parse_file rules_filename in
     let tag_name, attributes, children = get_element rules in
-    (*      error_endline tag_name;*)
     List.iter
       (fun logtype ->
 	let tag_name, attributes, children = get_element logtype in
-	(*	  error_endline tag_name;*)
 	let extension = snd (List.find (fun (name, value) -> name = "extension") attributes) in
-(*	prdbg_endline ("Processing " ^ extension);*)
 	(Hashtbl.add handlers)
 	  (extension)
 	  begin
 	    let prepend =
 	      if (List.exists (fun (name, value) -> name = "prepend_rules") attributes) then begin
-(*		if List.length children > 0 then
-		  error_endline ("Both children and rules reference (using reference)!");*)
 		let reference = (snd (List.find (fun (name, value) -> name = "prepend_rules") attributes)) in
-		(*prdbg_endline ("Using " ^ reference ^ " for " ^ extension);*)
 		Hashtbl.find rule_hash reference
 	      end else []
 	    in
@@ -201,7 +104,6 @@ begin try
 		(List.map
 		  (fun rule ->
 		    let tag_name, attributes, children = get_element rule in
-		    (*	      error_endline tag_name;*)
 		    let expanded_rules = begin
 		      try
 			[snd (List.find (fun (name, value) -> name = "regexp") attributes)]
@@ -218,7 +120,6 @@ begin try
 				  debug_endline ("Ignoring fragment '" ^ frag ^ "'.");
 				  false
 				with Not_found ->
-(*				  prdbg_endline ("Keeping fragment '" ^ frag ^ "'.");*)
 				  true
 			      ) fragments
 			    in
@@ -235,7 +136,6 @@ begin try
 		      "Error" -> Error
 		    | "Dependency_error" -> Dependency_error
 		    | "Warning" -> Warning
-(*		    | "Good" -> Good*)
 		    | "Information" -> Information
 		    | "Unknown" -> error_endline ("Unknown is not a valid result (folded into Unknown)"); Unknown
 		    | result -> error_endline ("Unknown result: " ^ result ^ " (folded into Unknown)"); Unknown
@@ -275,7 +175,6 @@ let match_log s f =
     let data = Str.matched_group 2 s in
     f dir data
 ;;
-
     
 type line_count = {
     error : int;
@@ -292,122 +191,37 @@ type line_count = {
     unmatched : int;
   }
 
-(*    let hours, minutes, seconds =
-      let timings =
-	List.flatten
-	(List.map
-	   (fun (m, lst)
-	     -> (*m,*)
-	       (List.map
-		  (fun x -> match x with None -> assert false | Some x -> x
-		  ) (List.filter
-		       (fun x -> match x with None -> false | Some x -> true
-		       ) (List.map
-			    (fun (a, ((b : result), c, d, e, _)) ->
-			      e) lst)
-		    )
-	       )
-	   ) out);
-      in
-      let bt =
-	let bt = List.fold_left (+.) 0. timings in
-	(int_of_float bt)
-      in
-      let hours = bt / (60 * 60) in
-	let minutes = (bt - (hours * 60 * 60)) / 60 in
-	let seconds = (bt - (hours * 60 * 60) - (minutes * 60)) in
-	hours, minutes, seconds
-    in*)
-(*      let file_statistics =
-        let sum =
-          List.fold_left
-            (fun c (_, _, s) ->
-              match s with
-                Error -> { c with error = c.error + 1 }
-              | Warning -> { c with warning = c.warning + 1 }
-              | Dependency_error -> { c with dependency_error = c.dependency_error + 1 }
-              | Good -> { c with good = c.good + 1 }
-              | Don't_care -> { c with don't_care = c.don't_care + 1 }
-              | Not_our_fault -> { c with not_our_fault = c.not_our_fault + 1 }
-              | Induced_warning -> { c with induced_warning = c.induced_warning + 1 }
-              | Add -> { c with add = c.add + 1 }
-              | Delete -> { c with delete = c.delete + 1 }
-              | Time_begin -> { c with time_begin = c.time_begin + 1 }
-              | Time_end -> { c with time_end = c.time_end + 1 }
-              | Unmatched -> { c with unmatched = c.unmatched + 1 }
-            )
-            {
-             error = 0;
-             warning = 0;
-             dependency_error = 0;
-             good = 0;
-             don't_care = 0;
-             not_our_fault = 0;
-             induced_warning = 0;
-             add = 0;
-             delete = 0;
-             time_begin = 0;
-             time_end = 0;
-             unmatched = 0;
-           }
-            processed_lines
-        in
-	sum
-(*        let first = ref true in
-        List.fold_left (fun a b ->
-          if String.length b = 0 then
-            a
-          else if !first then
-            (first := false; (a ^ b))
-          else
-            (a ^ ", " ^ b)) ""
-          [
-           if sum.error > 0 then Printf.sprintf "E%i" sum.error else "";
-           if sum.warning > 0 then Printf.sprintf "W%i" sum.warning else "";
-           if sum.dependency_error > 0 then Printf.sprintf "D%i" sum.dependency_error else "";
-(*            if sum.good > 0 then Printf.sprintf "G%i" sum.Good else ""; *)
-(*            if sum.don't_care > 0 then Printf.sprintf "D%i" sum.Don't_care else ""; *)
-           if sum.not_our_fault > 0 then Printf.sprintf "N%i" sum.not_our_fault else "";
-           if sum.induced_warning > 0 then Printf.sprintf "I%i" sum.induced_warning else "";
-           if sum.add > 0 then Printf.sprintf "+%i" sum.add else "";
-           if sum.delete > 0 then Printf.sprintf "-%i" sum.delete else "";
-(*            if sum.time_begin > 0 then Printf.sprintf "T%i" sum.Time_begin else ""; *)
-(*            if sum.time_end > 0 then Printf.sprintf "T%i" sum.Time_end else ""; *)
-           if sum.unmatched > 0 then Printf.sprintf "?%i" sum.unmatched else "";
-         ]*)
-      in
-*)
-
 let specialized_information t input_lines =
   match t with
       "timing" ->
         if List.length input_lines > 1 then
-          ( let imperative_timing, timing = ref None, ref 0.0 in
+          ( let imperative_timing, timing = ref None, ref (Unix.gmtime 0.0, 0.0) in
               List.iter
                 (fun (_, i) ->
                    try
                    Scanf.sscanf i "BUILD %s %s %i-%i-%i %i:%i:%i"
                      (fun state target year mon mday hour min sec ->
-	                let (t, _) = Unix.mktime {
+	                let (t, t') = Unix.mktime {
 	                  Unix.tm_sec = sec;
    	                  Unix.tm_min = min;
    	                  Unix.tm_hour = hour;
    	                  Unix.tm_mday = mday;
-   	                  Unix.tm_mon = mon;
+   	                  Unix.tm_mon = mon - 1;
    	                  Unix.tm_year = year - 1900;
-	                  
+	                  (* ignored *)
    	                  Unix.tm_wday = 0;
    	                  Unix.tm_yday = 0;
    	                  Unix.tm_isdst = false;
 	                } in
 	                  match state with
 	                      "BEGIN" ->
+				timing := (t', 0.0);
 	                        imperative_timing := Some t
 	                    | "END" ->
 	                        (match !imperative_timing with
 	                             Some ot ->
 		                       let tdiff = t -. ot in
-		                         timing := tdiff;
+		                         timing := (fst (!timing), tdiff);
 		                         imperative_timing := None
 	                           | None -> error_endline "Timing.END but no previous time")
 	                    | _ ->
@@ -422,7 +236,6 @@ let specialized_information t input_lines =
 
 let generate_logfile ~t ~target_file file_name : logfile =
   (
-	    (* 		  let scanbuf = Lexing.from_channel (open_in (fn_cat [build_logs_name; date_name; file])) in *)
     let source_file = file_name in
     let input_lines =
       let i = (open_in source_file) in
@@ -462,15 +275,13 @@ let generate_logfile ~t ~target_file file_name : logfile =
       in
 
      let o = open_out target_file in
-(*     prdbg_endline target_file;*)
        RenderCommon.html_head ~ch:o ~file:target_file ~title:t;
-       Printf.fprintf o (*"<html><head><title>%s</title><link rel=\"stylesheet\" href=\"trurl_logs.css\" type=\"text/css\"></head>\n"*) "<div class=\"other\">";
+       Printf.fprintf o "<div class=\"other\">";
      let in_idx s =
-        match s with
-(*type result = Perfect | Error | Dependency_error | Warning | Information | Unknown*)
-          Error | Warning | Dependency_error -> true
-        (*| Perfect*) | Information  -> false
-        | Unknown -> false (* XXX might need to special case this for hall of confusion *)
+       match s with
+           Error | Warning | Dependency_error -> true
+         | Information  -> false
+         | Unknown -> false (* XXX might need to special case this for hall of confusion *)
       in
      let idx =
         List.filter (fun (_, _, s) ->
@@ -498,7 +309,7 @@ let generate_logfile ~t ~target_file file_name : logfile =
                       target2
                   in
                     Printf.fprintf o " <a href=\"%s\">%s</a>" target2 step
-           ) ["timing"; (*"diff";*) "autogen_sh"; "configure"; "make_all"; "make_check"; "make_install"];
+           ) ["timing"; "autogen_sh"; "configure"; "make_all"; "make_check"; "make_install"];
          Printf.fprintf o "<br />";
        end;
      begin
@@ -543,7 +354,7 @@ let generate_logfile ~t ~target_file file_name : logfile =
             l
                 )
         processed_lines;
-      Printf.fprintf o "</div>" (*"</body></html>\n"*);
+      Printf.fprintf o "</div>";
       RenderCommon.html_foot ~valid:false o;
       close_out o;
 
@@ -552,19 +363,6 @@ let generate_logfile ~t ~target_file file_name : logfile =
           List.map
             (fun (_, _, s) ->
 	      s
-(*              match s with
-                Error -> Failed
-              | Warning -> Warned
-              | Dependency_error -> Unsatisfied_dependencies
-              | Good -> Perfect
-              | Don't_care -> Information
-              | Not_our_fault -> Known_error
-              | Induced_warning -> Known_error
-              | Add -> Information
-              | Delete -> Information
-              | Time_begin -> Information
-              | Time_end -> Information
-              | Unmatched -> Unknown*)
             ) processed_lines
         in
 	List.fold_left AlertSort.highest_alert Unknown lst in
@@ -581,7 +379,7 @@ let generate_logfile ~t ~target_file file_name : logfile =
                 match t, how, num with
                   _, "EXIT", 0
                 | "diff", "EXIT", 1 -> !rval
-                | "cvs", "EXIT", 1 -> AlertSort.highest_alert !rval Warning (*type result = Perfect | Error | Dependency_error | Warning | Information | Unknown*)
+                | "cvs", "EXIT", 1 -> AlertSort.highest_alert !rval Warning
                 | "patch", "EXIT", 1 -> AlertSort.highest_alert !rval Warning
                 | "autogen_sh", "EXIT", 1
                 | "configure", "EXIT", 1
@@ -639,7 +437,7 @@ let process_logfile file_name t =
       do_gen ()
 
 let generate_logdir =
-  (fun dir_name ->
+  (fun (dir_name, snapshot) ->
 (*    let glance = ref [] in*)
     let __fields = ref [] in
     let reg_field f =
@@ -675,30 +473,26 @@ let generate_logdir =
         (fun (project, data) ->
 	   { l_module = project;
 	     l_result = (List.fold_left AlertSort.highest_alert Unknown (List.map (fun { f_result = result } -> result) data));
-             l_logs = data; }
-             (*	(List.map
-	        (fun (step, (result, log_filename, (*float,*) lines)) ->
-	        )) data;*)
+             l_logs = data;
+	     l_snapshot = snapshot; }
         ) !output;
       in
-    (glance : logs (*(string * result * logs) list*))
+    (glance : logs)
   )
 let process_logdir = generate_logdir
 
 let acc_logdata () (*: (string option * ((string * result * logs) list) list) list*) =
-  let build_logs_name = "build_logs" in
-(*  let build_logs_dir = Unix.opendir build_logs_name in*)
+  let build_logs_name = "logs" in
   let file_acc = Hashtbl.create 16 in
 
   let rec walkndirs dirname maxdepth n leaf_function =
     let build_logs_dir = Unix.opendir (Filename.concat build_logs_name dirname) in
-    (try
+      (try
        while true do
          let date_name = Unix.readdir build_logs_dir in
            match date_name with
                "." | ".." -> ()
              | entry ->
-                 (*Printf.printf "entry: %i %s\n" n entry;*)
                  let name = Filename.concat dirname entry in
                    if n >= maxdepth
                    then leaf_function name
@@ -707,53 +501,17 @@ let acc_logdata () (*: (string option * ((string * result * logs) list) list) li
      with
          End_of_file -> (Unix.closedir build_logs_dir))
   in
-    walkndirs "" 3 0 
+    walkndirs "" 3 0
       (fun name ->
-         (*Printf.printf "leaf: %s\n" name;*)
+	 let snapshot = Scanf.sscanf name "%i/%i/%i/%i" (fun year month day build -> (year, month, day, build)) in
+	 let name = name ^ "/logs" in
 	 let build = None in
 	   if Hashtbl.mem file_acc build then
 	     Hashtbl.replace file_acc build
-	       (name :: Hashtbl.find file_acc build)
+	       ((name, snapshot) :: Hashtbl.find file_acc build)
 	   else
-	     Hashtbl.add file_acc build [name]
+	     Hashtbl.add file_acc build [(name, snapshot)]
       );
-(*
-  (try
-    while true do
-      let date_name = Unix.readdir build_logs_dir in
-      try
-	Scanf.sscanf date_name "%_i-%_i-%_[0123456789]%_[0123456789]_%_[0123456789]%_[0123456789]_%s"
-	  (fun build ->
-	    let build = Some build in
-	    if Hashtbl.mem file_acc build then
-	      Hashtbl.replace file_acc build
-		(date_name :: Hashtbl.find file_acc build)
-	    else
-	      Hashtbl.add file_acc build [date_name]
-	  )
-      with
-	Scanf.Scan_failure _
-      | Failure _
-      | End_of_file ->
-	  try
-	    Scanf.sscanf date_name "%i-%i-%i"
-	      (fun y m d ->
-		let build = None in
-		if Hashtbl.mem file_acc build then
-		  Hashtbl.replace file_acc build
-		    (date_name :: Hashtbl.find file_acc build)
-		else
-		  Hashtbl.add file_acc build [date_name]
-	      )
-	  with
-	    Scanf.Scan_failure _
-	  | Failure _
-	  | End_of_file ->
-	      ()
-    done
-  with
-      End_of_file -> ());
-*)
 
   let process_acc file_acc : logs list (*((string * result * logs) list) list*) =
     let file_acc =
@@ -769,60 +527,220 @@ let acc_logdata () (*: (string option * ((string * result * logs) list) list) li
       List.rev !ext
     in
       List.map
-        (fun x ->
-           (process_logdir (Filename.concat build_logs_name x) (*: logs*)(*(string * result * logs) list*))
+        (fun (x, snapshot) ->
+	   (fun (year, month, day, build) -> Printf.eprintf "(%i, %i, %i, %i)\n" year month day build) snapshot;
+           (process_logdir (Filename.concat build_logs_name x, snapshot))
         ) file_acc
   in
   let out_acc = ref [] in
   Hashtbl.iter
     (fun key data ->
-      out_acc := (key, (process_acc data (*: ((string * result * logs) list) list*))) :: !out_acc
+      out_acc := (key, (process_acc data)) :: !out_acc
     ) file_acc;
   !out_acc
 ;;
 
-let find_special (logs : logfile list) =
-  let rec aux lst =
-    match lst with
-        [] -> None
-      | { f_special = hd } :: tl ->
-          match hd with
-              None -> aux tl
-            | Some _ -> hd
-  in aux logs
+let rsort lst = List.rev (List.sort compare lst);;
+let list_dir dir =
+  let lst = ref [] in
+  let dir' = Unix.opendir dir in
+    (try
+       while true do
+         let filename = Unix.readdir dir' in
+           match filename with
+               "." | ".." -> ()
+             | entry ->
+		 lst := entry :: !lst
+       done
+     with
+         End_of_file -> (Unix.closedir dir'));
+    !lst
+;;
+let rlist_dir dir =
+  rsort (list_dir dir)
+;;
+let hd = List.hd;;
+
+let parse_revisions file =
+(*  let channel = open_in file in*)
+  let scanbuf = Scanf.Scanning.from_file file in
+  let revisions = Hashtbl.create 32 in
+  let acc = Hashtbl.create 16 in
+    begin try
+      while true do
+	(try
+	   Scanf.bscanf scanbuf "\n" (fun () -> () (*print_endline "new section"*)) ();
+	   let f = Hashtbl.find acc in
+	   let name = Hashtbl.find acc "name" in
+	   let vcs =
+	     match Hashtbl.find acc "vcs" with
+		 "cvs" ->
+		   CVS { vc_repository = f "cvs.repository"; vc_path = f "cvs.path"; vc_branch = f "cvs.branch"; vc_time = Scanf.sscanf (f "cvs.time") "%i-%i-%i %i:%i:%i" (fun year month day hour minute second -> { Unix.tm_year = year - 1900; tm_mon = month - 1; tm_mday = day; tm_hour = hour; tm_min = minute; tm_sec = second; (* following is ignored: *) tm_wday = 0; tm_yday = 0; tm_isdst = false; }); }
+	       | "git" ->
+		   Git { vg_repository = f "git.repository"; vg_branch = f "git.branch"; vg_commit = f "git.commit"; }
+	       | vcs -> failwith ("unknown vcs: " ^ vcs)
+	   in
+	     Hashtbl.add revisions name vcs;
+	     Hashtbl.clear acc;
+	 with
+	     Scanf.Scan_failure _ ->
+	       Scanf.bscanf scanbuf "%[^ ] %[^\n]\n" (fun k v -> (*Printf.printf "k: '%s' v: '%s'\n" k v;*) Hashtbl.add acc k v));
+      done
+    with End_of_file ->
+      if Hashtbl.length acc <> 0 then failwith "unclaimed section FIXME";
+    end;
+    revisions
+(*    close_in channel;*)
+    
 ;;
 
-let find_timing logs =
-(*  match acc with
-      Some _ -> acc
-    | None ->*)
-        match find_special logs with
-            None -> None
-          | Some Timing x -> Some x
+let parse_log filename =
+  let res = (Pcre.exec ~rex:(Pcre.regexp "\\.log\\.([^.]+)$") filename) in
+  let step = (Pcre.get_substring res 1) in
+    process_logfile filename step
+;;
+
+let hash_add_to_list hash key item =
+  if not (Hashtbl.mem hash key) then
+    Hashtbl.add hash key [item]
+  else
+    Hashtbl.replace hash key (item :: Hashtbl.find hash key)
+;;
+
+let vcs_same_branch vcs vcs' =
+  match vcs, vcs' with
+      CVS { vc_branch = vc_branch }, CVS { vc_branch = vc_branch' } ->
+	vc_branch = vc_branch'
+    | Subversion _, Subversion _ -> failwith "FIXME vcs_same_branch subversion"
+    | Git { vg_branch = vg_branch }, Git { vg_branch = vg_branch' } ->
+	vg_branch = vg_branch'
+    | _ -> failwith "vcs_same_branch with different vcs called"
+;;
+
+let snapshot_merge_raw ({ ts_modules = ts_modules; } as snapshot : tr_snapshot) (module_name, revision, platform, build, host, logs) : tr_snapshot =
+  let current_module, other_modules =
+    let rec find_module lst =
+      match lst with
+	  { tm_module = tm_module; tm_revision = tm_revision; } as hd :: tl ->
+	    if (module_name = tm_module) && (vcs_same_branch tm_revision revision) then
+	      (hd, tl)
+	    else
+ 	      let (hd', tl') = find_module tl in
+		(hd', hd :: tl')
+	| [] ->
+	    ({ tm_module = module_name; tm_revision = revision; tm_result = Unknown (* FIXME *); tm_platforms = []; }, [])
+    in
+      find_module ts_modules
+  in
+  let current_platform, other_platforms =
+    let rec find_platform lst =
+      match lst with
+	  { tp_platform = tp_platform } as hd :: tl ->
+	    if (platform = tp_platform) then
+	      (hd, tl)
+	    else
+ 	      let (hd', tl') = find_platform tl in
+		(hd', hd :: tl')
+	| [] ->
+	    ({ tp_platform = platform; tp_result = Unknown; tp_builds = []; }, [])
+    in
+      find_platform current_module.tm_platforms
+  in
+  let new_build =
+    let (start, time) =
+      match find_timing logs with
+	  None -> Unix.gmtime 0.0, 0.0
+	| Some t -> t
+    in
+    { tb_build = build; tb_host = host; tb_start = start; tb_time = time; tb_result = fold_result' (fun { f_result = f_result; } -> f_result) logs; tb_logs = logs; }
+  in
+  let current_platform = { current_platform with tp_builds = new_build :: current_platform.tp_builds; } in
+  let current_platform = { current_platform with tp_result = fold_result' (fun { tb_result = tb_result; } -> tb_result) current_platform.tp_builds; } in
+  let current_module = { current_module with tm_platforms = current_platform :: other_platforms; } in
+  let current_module = { current_module with tm_result = fold_result' (fun { tp_result = tp_result; } -> tp_result) current_module.tm_platforms; } in
+  let snapshot = { snapshot with ts_modules = current_module :: other_modules; } in
+  let snapshot = { snapshot with ts_result = fold_result' (fun { tm_result = tm_result; } -> tm_result) snapshot.ts_modules; } in
+    snapshot    
+;;
+
+let platforms = Hashtbl.create 32;;
+List.iter
+  (fun (k, v) ->
+     Hashtbl.add platforms k v
+  ) ["demitar-cat", "ubuntu-8.04"] (* FIXME, load from file *)
+;;
+
+let acc_modules dir (snapshot : tr_snapshot) revisions host build : tr_snapshot =
+  let logs = rlist_dir dir in
+  let modules = Hashtbl.create 32 in
+    List.iter
+      (fun log ->
+	 try
+	   let res = (Pcre.exec ~rex:(Pcre.regexp "^(.+)\\.log\\.[^.]+$") log) in
+	   let module_ = (Pcre.get_substring res 1) in
+	     hash_add_to_list modules module_ (parse_log (dir ^ "/" ^ log));
+	 with Not_found -> ()
+      ) logs;
+    Hashtbl.fold
+      (fun k v snapshot ->
+	 snapshot_merge_raw snapshot (k, Hashtbl.find revisions k, Hashtbl.find platforms host, build, host, v)
+      ) modules snapshot
+;;
+
+let acc_builds dir snapshot revisions host : tr_snapshot =
+  let builds = rsort (list_dir dir) in
+    List.fold_left
+      (fun snapshot build ->
+	 acc_modules (dir ^ "/" ^ build) snapshot revisions host (int_of_string build)
+      ) snapshot builds
+;;
+
+let acc_hosts dir snapshot revisions : tr_snapshot =
+  let hosts = rsort (list_dir dir) in
+    List.fold_left
+      (fun snapshot host ->
+	 acc_builds (dir ^ "/" ^ host ^ "/builds") snapshot revisions host
+      ) snapshot hosts
+;;
+
+let acc_snapshots dir : tr_logs =
+  let acc =
+  let years = rsort (list_dir dir) in
+    List.map
+      (fun year ->
+       let months = rsort (list_dir (dir ^ "/" ^ year)) in
+	 List.map
+	   (fun month ->
+	    let days = rlist_dir (dir ^ "/" ^ year ^ "/" ^ month) in
+	      List.map
+		(fun day ->
+		 let snaps = rlist_dir (dir ^ "/" ^ year ^ "/" ^ month ^ "/" ^ day) in
+		   List.map
+		     (fun snap ->
+			let snapshot = (int_of_string year, int_of_string month, int_of_string day, int_of_string snap) in
+			let snapshot_dir = dir ^ "/" ^ year ^ "/" ^ month ^ "/" ^ day ^ "/" ^ snap in
+			let revisions = parse_revisions (snapshot_dir ^ "/" ^ "revisions") in
+			  [(*FIXME*)acc_hosts (snapshot_dir ^ "/" ^ "hosts") { ts_snapshot = snapshot; ts_result = Unknown; ts_modules = []; } revisions]
+		     ) (snaps)
+	      ) (days)
+	 ) (months)
+    ) (years)
+  in
+    (List.concat (List.concat (List.concat (List.concat acc))))
+;;
+
+let acc_logdata' () : tr_logs =
+  acc_snapshots "logs"
 ;;
 
 let main () =
-(*  let current_future =
-    try
-      let ch = open_in "global.state" in
-      let future =
-        try
-          if (input_line ch) = "build" then
-            Some (input_line ch)
-          else None
-        with End_of_file ->
-          None
-      in close_in ch; future
-    with Sys_error _ -> None
-  in
-    (match current_future with
-         None -> ()
-       | Some future -> () (*print_string (future ^ "\n")*));*)
-  let logs = acc_logdata () in
-  let logs (*: (string option * ((string * result * logs) list) list) list*) = logs in
+
+  let snapshots = acc_logdata' () in
+
+(*  let logs = acc_logdata () in
+  let logs = logs in
 
   (* Magical transformation - FROM list of [host 1-* module] TO list of [module 1-* host]. *)
-(*  error_endline "Debug dump:";*)
 
   let get_logs () =
     let transform_target = Hashtbl.create 128 in
@@ -834,8 +752,6 @@ let main () =
 	  (fun (build_results) ->
 	    List.iter
 	      (fun { l_module = project; l_result = result; l_logs = logs } ->
-(*                 print_string (project ^ "\n");*)
-(*                 List.iter (fun *)
 		(* Get or create module entry. *)
 		let project_hash =
                   match find_timing logs with
@@ -851,7 +767,6 @@ let main () =
 		(* If platform has a build entry, ignore otherwise add this status (and a reference to the log object). *)
 		if not (Hashtbl.mem project_hash platform) then
 		  Hashtbl.add project_hash platform (result, logs);
-(*		error_endline (" * " ^ platform ^ " -> " ^ project ^ " : " ^ (safe_string_of_result result));*)
 	      ) build_results;
 	  ) logs;
       ) logs;
@@ -863,7 +778,6 @@ let main () =
       (fun project project_hash ->
 	let platforms = ref [] in
 	let acc_result = ref Unknown in
-        (*let acc_timing = ref None in*)
 	Hashtbl.iter
 	  (fun platform (result, logs) ->
              (*acc_timing := find_timing (!acc_timing) logs;*)
@@ -880,18 +794,21 @@ let main () =
 
   let transformed_logs, future =
     get_logs ()
-  in
-  let snapshot_result logs = (List.fold_left AlertSort.highest_alert Unknown (List.map (fun { tm_result = result } -> result) logs)) in
+  in*)
+
+(*  let transformed_logs = logs in    *)
+
+(*  let snapshot_result logs = (List.fold_left AlertSort.highest_alert Unknown (List.map (fun { tm_result = result } -> result) logs)) in
   let snapshots =
     let current = { ts_snapshot = (1970, 01, 01, 001); ts_result = snapshot_result transformed_logs; ts_modules = transformed_logs } in
     let previous = current (* FIXME *) in
       [current; previous]
-  in
-  let future = match future with [] -> None | _ -> Some { ts_snapshot = (2100, 01, 01, 001); ts_result = snapshot_result future; ts_modules = future } in
+  in*)
+(*  let future = match future with [] -> None | _ -> Some { ts_snapshot = (2100, 01, 01, 001); ts_result = snapshot_result future; ts_modules = future } in*)
 
   Render.project_pages snapshots;
 
-  Render.frontpage snapshots future;
+  Render.frontpage snapshots None (*FIXMEfuture*);
 
   (* TODO:
      - Load map

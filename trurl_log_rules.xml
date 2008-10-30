@@ -41,6 +41,7 @@
     <rule regexp="^make: \*\*\* No rule to make target `.*'\.  Stop.$" result="Error" />
     <rule regexp="^[^:]+:(\d+:)* ((syntax|parse) error|error:|#error|`[^']+' undeclared) " result="Error" />
     <rule regexp="^OgrePagingLandScapeSceneManager\.cpp:\d+: warning: passing '((const )?Ogre::Real|float)' for argument \d+ to '.*'$" result="Information" comment="suppressing ember ogre warnings" />
+    <rule regexp="^OgreOpcodeCharacterController\.cpp:\d+:(\d+:)? warning: no newline at end of file$" result="Information" comment="suppressing ember ogre warnings" />
     <rule regexp="^(source/BatchedGeometry\.cpp|source/GrassLoader\.cpp|\./include/ImpostorPage\.h|source/PagedGeometry\.cpp|source/PropertyMaps\.cpp|source/TreeLoader2D\.cpp|source/TreeLoader3D\.cpp|pagedgeometry/include/PagedGeometry\.h|FoliageLayer\.cpp|pagedgeometry/include/ImpostorPage\.h|Input\.cpp|TerrainPageFoliage\.cpp|TerrainPageShadow\.cpp):\d+: warning: converting to '.*' from '((const )?Ogre::Real|float)'$" result="Information" comment="suppressing ember ogre warnings" />
     <rule regexp="^[^:]+:(\d+:)* warning: #warning " result="Warning" />
     <rule regexp="^[^:]+:(\d+:)* warning: " result="Warning" />

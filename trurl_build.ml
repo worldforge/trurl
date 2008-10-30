@@ -17,6 +17,7 @@
     along with Trurl.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
+let global_start_tv = Unix.gmtime (Unix.time ());;
 ignore (Sys.command ("touch timestamp_latest_build"));;
 
 (* open Shell;; *)
@@ -26,9 +27,8 @@ let to_file = Shell.to_file
 let (>&) = Shell.(>&)
 
 let build_date_path =
-  let tv = Unix.gmtime (Unix.time ()) in
-(*  Printf.sprintf "%04i-%02i-%02i_%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour + 1)*)
-  Printf.sprintf "%04i/%02i/%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday
+  let tv = global_start_tv in
+    Printf.sprintf "%04i/%02i/%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday
 ;;
 
 let get_date_time () =
@@ -37,14 +37,13 @@ let get_date_time () =
 ;;
 
 Sys.command "test -d da_build_dir || mkdir da_build_dir";;
-Sys.command "test -d build_logs || mkdir build_logs";;
+Sys.command "test -d logs || mkdir logs";;
 
 type build_module =
     Autogen
   | Configure of string list
   | Make of string
   | Time of string
-  | Cvs_diff
   | Link of (string * string)
   | Unlink of string
   | Patch of string
@@ -55,7 +54,6 @@ let loggage x =
   | Configure _ -> `overwrite "configure"
   | Make s -> `overwrite ("make_" ^ s)
   | Time _ -> `append "timing"
-  | Cvs_diff -> `overwrite "diff"
   | Link _ -> `ignore
   | Unlink _ -> `ignore
   | Patch _ -> `append "patch"
@@ -66,14 +64,13 @@ let string_of_mod x =
   | Configure _ -> "configure"
   | Make s -> ("make_" ^ s)
   | Time _ -> "timing"
-  | Cvs_diff -> "diff"
   | Link _ -> "link"
   | Unlink _ -> "unlink"
   | Patch _ -> "patch"
 
 
 let base_begin =
-  [Time "BEGIN";Cvs_diff]
+  [Time "BEGIN"]
 let base_end =
   [Time "END"]
 
@@ -114,7 +111,7 @@ let autotools ?(pre=[]) ?(post=[]) ?(patch=[]) ?(debug=true) ?(configure=(fun _ 
       autotools_mingw32_src ~configure_args ~patch ()
   ) @ post
 
-let logdir = Sys.getcwd () ^ "/build_logs/" ^ build_date_path
+let logdir = Sys.getcwd () ^ "/logs/" ^ build_date_path
 let logdir =
   let rec aux n =
     let dir = (logdir ^ "/" ^ (Printf.sprintf "%03i" n)) in
@@ -125,16 +122,22 @@ let logdir =
       else aux (n + 1)
   in aux 1
 ;;
+let logdir_global = logdir;;
+(*let logdir = logdir ^ "/logs";;*)
+let logdir = logdir ^ "/hosts/demitar-cat/builds/001";; (* FIXME *)
 let () = ignore (Sys.command ("echo " ^ logdir ^ " >> global.state"));;
-let () = ignore (Sys.command ("rm -rf " ^ logdir));;
-let logdir_mingw32 = logdir ^ "_mingw32";;
-let () = ignore (Sys.command ("rm -rf " ^ logdir_mingw32));;
 
 List.iter (fun x -> ignore (Sys.command (Printf.sprintf "test -d %s || mkdir -p %s" x x))) [logdir(*; logdir_mingw32*)];;
 
+type vcs_cvs = { vc_repository : string; vc_path : string; vc_branch : string; vc_time : Unix.tm }
+type vcs_subversion = { vs_repository : string; vs_path : string; vs_revision : int }
+type vcs_git = { vg_repository : string; vg_branch : string; vg_commit : string }
+type vcs = CVS of vcs_cvs | Subversion of vcs_subversion | Git of vcs_git
 type target = {
   name : string; (* no special chars please *)
-    rel_build_dir : string;
+  vcs : vcs;
+  (* sources reside in source/vcs_type/md5(repository)/cvs_or_svn_path/name *)
+  rel_build_dir : string;
   cvs_dir : string;
   cvs_tag : string option;
   environment : (string * string) list;
@@ -143,102 +146,106 @@ type target = {
 }
 let target ?(cvs_tag=None) ?(modules : [`native|`mingw32] -> build_module list = (autotools ~pre:[] ~post:[] ~patch:[] ~debug:true ~configure:(fun _ -> []))) ?(env=(function _ -> [])) name =
   name, cvs_tag, (fun x -> (("NOCONFIGURE", "yes") :: env x)), modules
+
 let to_build =
   let cvs_root = Sys.getcwd () in
   let gamma =
-    (fun m (name, cvs_tag, env, (modules : [`native|`mingw32] -> build_module list)) ->
-      [
-	{
-	  name = name;
-	 rel_build_dir = name;
-	  cvs_dir = Printf.sprintf "%s/%s/%s" cvs_root m name;
-	 cvs_tag = cvs_tag;
-	  environment = ("LC_ALL", "C") :: ("PKG_CONFIG_PATH", prefix ^ "/lib/pkgconfig:/usr/local/lib/pkgconfig") :: ("LD_LIBRARY_PATH", prefix ^ "/lib") :: ("ACLOCAL_FLAGS", "-I " ^ prefix ^ "/share/aclocal" ^ (if Sys.file_exists (*is_directory*) "/usr/local/share/aclocal" then " -I /usr/local/share/aclocal" else "") ^ " -I /usr/share/aclocal") :: env `native;
-	  modules = modules `native;
-	  logbase = Printf.sprintf "%s/%s.log." logdir name;
-	};
-	(*{
-	  name = name;
-	 rel_build_dir = name ^ "_mingw32";
-	  cvs_dir = Printf.sprintf "%s/%s/%s" cvs_root m name;
-	 cvs_tag = cvs_tag;
-	  environment = ("PKG_CONFIG_LIBDIR", "/usr/local/i386-mingw32/lib/pkgconfig/" (* To ensure we don't pick up native versions unnecessarily. *)) :: ("PKG_CONFIG_PATH", prefix_mingw32 ^ "/lib/pkgconfig:" ^ mingw32msvc_root ^ "/lib/pkgconfig") :: ("LD_LIBRARY_PATH", prefix_mingw32 ^ "/lib" ^ ":" ^ mingw32msvc_root ^ "/lib") :: ("LDFLAGS", "-no-undefined -L" ^ mingw32msvc_root ^ "/lib") :: ("CPPFLAGS", "-I" ^ mingw32msvc_root ^ "/include") :: ("PATH", mingw32msvc_root ^ "/bin:/usr/local/bin:/usr/bin:/bin:/usr/bin/X11:/usr/games") :: ("ACLOCAL_FLAGS", "-I " ^ prefix_mingw32 ^ "/share/aclocal -I " ^ mingw32msvc_root ^ "/share/aclocal " (*-I /usr/local/share/aclocal*) ^ " -I /usr/share/aclocal") :: env `mingw32;
-	  modules = modules `mingw32;
-	  logbase = Printf.sprintf "%s/%s.log." logdir_mingw32 name;
-	}*)
-      ]
+    (fun (vcs) (name, cvs_tag, env, (modules : [`native|`mingw32] -> build_module list)) ->
+       let vcs, source_dir =
+	 let md5 str =
+	   Cryptokit.transform_string (Cryptokit.Hexa.encode ()) (Cryptokit.hash_string (Cryptokit.Hash.md5 ()) str)
+	 in
+	 let calc_source_dir type_str repo prefix = Printf.sprintf "%s/source/%s/%s/%s%s" cvs_root type_str (md5 repo) prefix name in
+ 	   match vcs with
+	       `cvs (repository, path_prefix, branch) ->
+		 CVS { vc_repository = repository; vc_path = path_prefix; vc_branch = branch; vc_time = global_start_tv; }, calc_source_dir "cvs" repository (if path_prefix = "" then "" else path_prefix ^ "/")
+	     | `git (repository, branch) ->
+		 let source_dir = calc_source_dir "git" repository "" in
+		 let git_tip_of_branch dir branch =
+		   let buffer = Buffer.create 41 in
+		   let stdout = Shell.to_buffer buffer in
+		     Sys.chdir dir;
+		     Shell.call ~stdout [Shell.command ~arguments:[|"-n";"1";branch|] (Shell_sys.lookup_executable "git-rev-list")];
+		     Sys.chdir cvs_root;
+		     Buffer.sub buffer 0 40 (* avoid the newline *)
+		 in
+		   Git { vg_repository = repository; vg_branch = branch; vg_commit = git_tip_of_branch source_dir branch }, source_dir
+	     (* sources reside in source/vcs_type/md5(repository)/cvs_or_svn_path/name *)
+       in
+       [
+	 {
+	   name = name;
+	   vcs = vcs;
+	   rel_build_dir = name;
+	   cvs_dir = source_dir;
+	   cvs_tag = cvs_tag;
+	   environment = ("LC_ALL", "C") :: ("PKG_CONFIG_PATH", prefix ^ "/lib/pkgconfig:/usr/local/lib/pkgconfig") :: ("LD_LIBRARY_PATH", prefix ^ "/lib") :: ("ACLOCAL_FLAGS", "-I " ^ prefix ^ "/share/aclocal" ^ (if Sys.file_exists (*is_directory*) "/usr/local/share/aclocal" then " -I /usr/local/share/aclocal" else "") ^ " -I /usr/share/aclocal") :: env `native;
+	   modules = modules `native;
+	   logbase = Printf.sprintf "%s/%s.log." logdir name;
+	 };
+       ]
     )
   in
-  let beta m x = gamma ("forge/" ^ m) x in
-(*  let sdl_image_LIBS =
-    "" (*"-I/win/autobuild/mingw32msvc/target//include/SDL -Dmain=SDL_main -L/win/autobuild/mingw32msvc/target//lib -lmingw32 -lSDLmain -lSDL -mwindows -luser32 -lgdi32 -lwinmm -lSDL_image -lpng -lz"*)
-  in*)
-(*  gamma "." (target "minimal") @
-  gamma "." (target "minimal_empty") @
-  gamma "." (target "minimal_warning") @
-  gamma "." (target "minimal_error") @*)
-    gamma "git" (target "libwfut") @
-  (List.flatten
-     (List.flatten
-        (List.map
-	   (fun (m, lst) ->
-	     List.map
-	       (beta m)
-	       lst
-	   ) [
-	 "libs",
-	 [
-	  target "skstream";
-	  target "varconf";
-(*	  target "libwfut";*)
-	  target (* ~modules:(autotools ~pre:[Link (cvs_root ^ "/forge/protocols/", "../../../../")] ~post:[Unlink "../../../../protocols"]) *) ~env:(fun _ -> ["PYTHONPATH", cvs_root ^ "/forge/libs/Atlas-Python/"]) "Atlas-C++";
-(*	  target ~env:(fun _ -> ["PYTHONPATH", cvs_root ^ "/forge/libs/Atlas-Python/"]) ~cvs_tag:(Some "atlas-cpp-0_4_transitional") "Atlas-C++_0_5";*)
-	  target "wfmath";
-	  target "mercator";
-	  target "sage";
-(*	  target ~env:(function `mingw32 -> ["LIBS", sdl_image_LIBS] |
-`native -> []) "edifice";*)
-	  target "eris";
-(*	  target ~cvs_tag:(Some "eris_1_2_transitional") "eris_1_2";*)
-(*	  target ~modules:(autotools ~configure:(fun x -> match x with `native -> [] | `mingw32 -> ["--without-x"])) "wftk";*)
-	];
-	 
-	 "scratchpad",
-	 [
-	  target "tree";
-	];
-	 
-	 "tools",
-	 [
-	  target "entityforge";
-	];
-	 
-	 "servers",
-	 [
-	  target "indri";
-	  target ~modules:(autotools (*~patch:["gcc-3.3.diff"]*)) "cyphesis-C++";
-	  target ~modules:(autotools (*~patch:["venus-gcc-3.3.diff"]*)) "venus";
-	];
-
-	 "clients",
-	 [
-(*	  target "feast";*)
-(*          target (*~modules:(autotools ~configure:(fun x -> match x with `native -> [] | `mingw32 -> ["--disable-binreloc"]))*) "sear";*)
-	  target (*~env:(function `mingw32 -> ["LIBS", sdl_image_LIBS] | `native -> [])*) "equator";
-	  target (*~modules:(autotools (*~patch:["apogee-gcc-3.3.diff"]*)) ~env:(function `mingw32 -> ["LIBS", sdl_image_LIBS] | `native -> [])*) "apogee";
-(*	  target "uclient";*)
-	  target "silence";
-	  target "process";
-	];
-         
-       ]
-        )
-     )
-  )
-    @ gamma "git" (target "sear")
-    @ gamma "git" (target "ember")
- (* @ gamma "." (target "metaserver")*)
-(*  @ gamma "." (target "3Drts") XXX think hard *)
+  let beta m x = gamma (`cvs (":pserver:cvsanon@cvs.worldforge.org:2401/home/cvspsrv/worldforge", ("forge/" ^ m), "HEAD")) x in
+  let git m =
+    gamma (`git (Printf.sprintf "git://git.worldforge.org/%s.git" m, "master")) (target m)
+  in
+    (*
+	REPOS='cvs%:pserver:cvsanon@cvs.worldforge.org:2401/home/cvspsrv/worldforge%forge'
+	for MODULE in ember sear libwfut; do
+            REPOS="$REPOS git%git://git.worldforge.org/$MODULE.git%$MODULE"
+    *)
+    git "libwfut" @
+      (List.flatten
+	 (List.flatten
+            (List.map
+	       (fun (m, lst) ->
+		  List.map
+		    (beta m)
+		    lst
+	       ) [
+		 "libs",
+		 [
+		   target "skstream";
+		   target "varconf";
+		   target ~env:(fun _ -> ["PYTHONPATH", cvs_root ^ "/forge/libs/Atlas-Python/"]) "Atlas-C++";
+		   target "wfmath";
+		   target "mercator";
+		   target "sage";
+		   target "eris";
+		 ];
+		 
+		 "scratchpad",
+		 [
+		   target "tree";
+		 ];
+		 
+		 "tools",
+		 [
+		   target "entityforge";
+		 ];
+		 
+		 "servers",
+		 [
+		   target "indri";
+		   target ~modules:(autotools) "cyphesis-C++";
+		   target ~modules:(autotools) "venus";
+		 ];
+		 
+		 "clients",
+		 [
+		   target "equator";
+		   target "apogee";
+		   target "silence";
+		   target "process";
+		 ];
+		 
+	       ]
+            )
+	 )
+      )
+    @ git "sear"
+    @ git "ember"
 ;;
 
 let dump_evals meta x =
@@ -252,30 +259,37 @@ let dump_evals meta x =
   | Unix.WSTOPPED n -> "STOP", n)
 ;;
 
-let ub = (^) "/usr/bin/";;
-
-let no_cvs = true || (Array.length Sys.argv > 1 && Sys.argv.(1) = "--no-cvs") ;;
-    
-(* CVS update *)
-if not no_cvs then
+(* store revisions *)
+let tm_to_string tv = Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour + 1) (tv.Unix.tm_min + 1) (tv.Unix.tm_sec + 1)
+;;
+let store_revisions to_build =
+  let ch = open_out (logdir_global ^ "/revisions") in
+  let pr key value = Printf.fprintf ch "%s %s\n" key value in
     List.iter
-      (fun t ->
-	try begin
-	  Sys.chdir t.cvs_dir;
-	  let cmd = Shell.cmd ~assignments:[Shell.stderr >& Shell.stdout] (ub "cvs") (["-z6"; "update"; "-dP"; "-A"; "-C"] @ (match t.cvs_tag with None -> [] | Some tag -> ["-r"; tag])) in
-	  try
-	    Shell.call ~stdout:(to_file (t.logbase ^ "cvs")) [cmd]
-	  with
-            Shell.Subprocess_error res ->
-              let meta = open_out (t.logbase ^ "cvs.meta") in
-              output_string meta "result:";
-              List.iter (dump_evals meta) res;
-              close_out meta;
-	end with
-	  ex ->
-	    prerr_endline ("Unable to cvs update " ^ t.cvs_dir ^ " due to unexpected event:\n" ^ (Printexc.to_string ex));
-      ) to_build
-      ;;
+      (fun { name = name; vcs = vcs; } ->
+	 pr "name" name;
+	 begin match vcs with
+	     CVS { vc_repository = vc_repository; vc_path = vc_path; vc_branch = vc_branch; vc_time = vc_time; } ->
+	       pr "vcs" "cvs";
+	       pr "cvs.repository" vc_repository;
+	       pr "cvs.path" vc_path;
+	       pr "cvs.branch" vc_branch;
+	       pr "cvs.time" (tm_to_string vc_time);
+	   | Subversion (*{ vs_repository = vs_repository; vs_path = vs_path; vs_revision = vs_revision; }*) _ (* FIXME *) ->
+	       pr "vcs" "svn-fixme"
+	   | Git { vg_repository = vg_repository; vg_branch = vg_branch; vg_commit = vg_commit; } ->
+	       pr "vcs" "git";
+	       pr "git.repository" vg_repository;
+	       pr "git.branch" vg_branch;
+	       pr "git.commit" vg_commit;
+	 end;
+	 Printf.fprintf ch "\n"
+    ) to_build;
+    close_out ch
+;;
+store_revisions to_build;;
+
+let ub = (^) "/usr/bin/";;
 
 let process_module ~cvs_tag ~stdout ~meta ~assignments ~environment m =
   let c x y = 
@@ -304,9 +318,6 @@ let process_module ~cvs_tag ~stdout ~meta ~assignments ~environment m =
 	   c (ub "make") [target]
        | Time state ->
 	   c "/bin/echo" ["BUILD"; state; "module"; get_date_time ()]
-       | Cvs_diff -> 
-           if no_cvs || cvs_tag <> None then raise (Shell.Subprocess_error ["", Unix.WEXITED 0]);
-	   c (ub "cvs") ["-z6"; "diff"; "-u"; "-D"; "24 hours ago" (* XXX check previous diff and use that time *)]
        | Link (source, target) ->
 	   c "/bin/ln" ["-s"; source; target];
        | Unlink target ->
@@ -324,7 +335,7 @@ let process_module ~cvs_tag ~stdout ~meta ~assignments ~environment m =
           match b, m with
             Unix.WEXITED 0, _ -> a
           | Unix.WEXITED 1, Patch _ -> a
-          | (Unix.WEXITED _ | Unix.WSIGNALED _ | Unix.WSTOPPED _), (Cvs_diff | Make ("check" | "install") | Link _ | Unlink _) -> a
+          | (Unix.WEXITED _ | Unix.WSIGNALED _ | Unix.WSTOPPED _), (Make ("check" | "install") | Link _ | Unlink _) -> a
           | (Unix.WEXITED _ | Unix.WSIGNALED _ | Unix.WSTOPPED _), (Patch _ | Make _ | Time _ | Configure _ | Autogen)
             -> false)
         true (List.map snd res);
@@ -398,5 +409,3 @@ List.iter
     Printf.eprintf "debug: build end %s\n" t.name; flush stderr;
      end
   ) to_build
-      
-(* ./da_log_processor public_html 10 > public_html/index.html.new && mv public_html/index.html.new public_html/index.html *)

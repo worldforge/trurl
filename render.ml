@@ -24,6 +24,19 @@ open RenderCommon
 let tm_to_string tv = Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour + 1) (tv.Unix.tm_min + 1) (tv.Unix.tm_sec + 1)
 ;;
 
+let git_href repo branch commit text =
+  let res = (Pcre.exec ~rex:(Pcre.regexp "^git://(.*)/(.*\\.git)$") repo) in
+  let httprepo = "http://" ^ (Pcre.get_substring res 1) ^ "/?p=" ^ (Pcre.get_substring res 2) in
+  "<a href=\"" ^ httprepo ^
+    (match commit with
+	 None -> ";a=shortlog" ^ ";h=refs/heads/" ^ branch
+       | Some commit -> ";a=commitdiff;h=" ^ commit) ^
+    "\">" ^ text ^ "</a>"
+;;
+let href href text =
+  "<a href=\"" ^ href ^ "\">" ^ text ^ "</a>"
+  
+	
 let dump_module { tm_module = project; tm_result = tm_result; tm_platforms = platforms; tm_revision = tm_revision; } ch =
   let pr title description = Printf.fprintf ch "<dt>%s</dt>\n<dd>%s</dd>\n" title description in
   let dl result = Printf.fprintf ch "<dl class=\"%s\">" (safe_string_of_result result) in
@@ -35,7 +48,7 @@ let dump_module { tm_module = project; tm_result = tm_result; tm_platforms = pla
     Printf.fprintf ch "<dd>%s</dd>"
       (match tm_revision with CVS cvs -> "CVS: " ^ cvs.vc_repository ^ " using path " ^ cvs.vc_path ^ " and branch " ^ cvs.vc_branch ^ " at time " ^ (tm_to_string cvs.vc_time)
 	 | Subversion svn -> "SVN: " ^ svn.vs_repository ^ " using path " ^ svn.vs_path ^ " at r" ^ (string_of_int svn.vs_revision)
-	 | Git git -> "Git: " ^ git.vg_repository ^ " using branch " ^ git.vg_branch ^ " at commit " ^ git.vg_commit);
+	 | Git git -> "Git: " ^ (href git.vg_repository git.vg_repository) ^ " using branch " ^ (git_href git.vg_repository git.vg_branch None git.vg_branch) ^ " at commit " ^ (git_href git.vg_repository git.vg_branch (Some git.vg_commit) git.vg_commit));
     pr "Result" (safe_string_of_result tm_result);
     Printf.fprintf ch "<dt>%s</dt>" "Revisions";
     List.iter

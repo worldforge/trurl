@@ -5,7 +5,7 @@ NATIVE_ENABLED = false
 OCAMLFLAGS    += -dtypes
 
 USE_OCAMLFIND = true
-OCAMLPACKS = unix pcre str shell xml-light extlib
+OCAMLPACKS = unix pcre str shell xml-light extlib cryptokit
 OCamlProgram(trurl_render_log, types config alertSort renderCommon renderEmbarrassment render parsers logs results codec_packed object)
 OCamlProgram(trurl_build, trurl_build)
 
