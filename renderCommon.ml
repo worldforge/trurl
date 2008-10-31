@@ -95,8 +95,20 @@ let time_as_gears_or_time (time : float option) =
       Some seconds -> "(" ^ (fmt' seconds) ^ ")"
     | None -> time_as_gears time
 
+let split s c =
+  let i = String.index s c in
+    ((String.sub s 0 i), (String.sub s (i + 1) (String.length s - i - 1)))
+
+let render_platform platform =
+  let (platform, version) = split platform '-' in
+    "<img src=\"static/images/platforms/" ^ platform ^ platform_image_version ^ ".png\" alt=\"" ^ platform ^ "\" /> " ^ version
+;;
+
 let render_platform_images platforms =
-  (List.fold_left (fun str { tp_platform = platform; tp_result = result; tp_builds = builds; (*tp_time = time;*) (*tp_logs = logs*) } -> str ^ "<img src=\"static/images/platforms/" ^ platform ^ platform_image_version ^ ".png\" alt=\"" ^ platform ^ "\" />" (*^ (time_as_gears ((List.hd builds).tb_time))*)) "" platforms)
+  (List.fold_left
+     (fun str { tp_platform = platform; tp_result = result; tp_builds = builds; (*tp_time = time;*) (*tp_logs = logs*) } ->
+	str ^ (render_platform platform)
+     ) "" platforms)
 ;;
 
 let render_platform_gears platforms =
