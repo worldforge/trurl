@@ -42,6 +42,10 @@ let save new_results =
     output_file ~filename:"trurl.states" ~text:data
 ;;
 
+let filter_map f l =
+  List.map (fun x -> match x with None -> failwith "impossible (filter_map)" | Some x' -> x') (List.filter ((<>) None) (List.map f l))
+;;
+
 let merge (old_results : Object.atlasobject) (transformed_logs : tr_logs) =
   let latest_modules = ((List.hd (* we by definition only want the latest snapshot *) transformed_logs).ts_modules) in
   let new_results =
@@ -50,12 +54,12 @@ let merge (old_results : Object.atlasobject) (transformed_logs : tr_logs) =
             (fun { tm_module = tm_module; tm_platforms = tm_platforms } ->
                (tm_module,
                 (Object.Map 
-                   (List.map (*filter_map*)
-                      (fun { tp_platform = tp_platform; tp_result = tp_result; (*tp_time = tp_time*) } ->
-(*                         if tp_time = None then
-                           None
+                   (filter_map
+                      (fun { tp_platform = tp_platform; tp_result = tp_result; (*tp_time = tp_time;*) tp_builds = tp_builds; } ->
+                         if (List.fold_left (fun acc build -> acc +. build.tb_time) 0.0 tp_builds) > 0.0 then
+                           Some (tp_platform, Object.Map [("result", Object.String (safe_string_of_result tp_result))])
                          else
-                           Some*) (tp_platform, Object.Map [("result", Object.String (safe_string_of_result tp_result))])
+                           None
                       ) tm_platforms)))
             ) latest_modules)
   in
