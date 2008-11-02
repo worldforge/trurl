@@ -47,3 +47,12 @@ let generate_n_logs =
     int_of_string Sys.argv.(2)
   with _ ->
     6
+
+let html_root =
+  try
+    if Sys.argv.(2) = "--testbed" then "/trurl/testbed/" else "/trurl/"
+  with _ -> "/trurl/";;
+
+let rules_filename = "trurl_log_rules.xml"
+let stat_self = Unix.stat Sys.argv.(0)
+let stat_rules = Unix.stat rules_filename

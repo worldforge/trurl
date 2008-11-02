@@ -20,6 +20,94 @@
 open Types;;
 open Config;;
 
+let tm_to_string tv = Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour) (tv.Unix.tm_min) (tv.Unix.tm_sec)
+;;
+
+let tm_to_iso8601 tv = (* This has the nice property of containing no spaces *) Printf.sprintf "%04i-%02i-%02iT%02i:%02i:%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour) (tv.Unix.tm_min) (tv.Unix.tm_sec)
+;;
+
+let tm_to_iso8601_utc tv = (* This has the nice property of containing no spaces *) Printf.sprintf "%04i-%02i-%02iT%02i:%02i:%02iZ" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour) (tv.Unix.tm_min) (tv.Unix.tm_sec)
+;;
+
+let tm_to_cvs_iso8601 tv = (* This has the nice property of containing no spaces *) Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i UTC" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour) (tv.Unix.tm_min) (tv.Unix.tm_sec)
+;;
+
+let md5 str =
+  Cryptokit.transform_string (Cryptokit.Hexa.encode ()) (Cryptokit.hash_string (Cryptokit.Hash.md5 ()) str)
+;;
+
+let ends_with pattern string =
+  if String.length pattern > String.length string then
+    false
+  else
+    String.sub string (String.length string - String.length pattern) (String.length pattern) = pattern
+;;
+
+let begins_with pattern string =
+  if String.length pattern > String.length string then
+    false
+  else
+    String.sub string 0 (String.length pattern) = pattern
+;;
+
+let cached_cvs_diff ~name ~current ~previous : string list =
+  let orig_wd = Sys.getcwd () in
+  let root = "/home/trurl/work" in
+  let repo = current.vc_repository in
+  let prefix = current.vc_path in
+  let executable = "cvs" in
+  let arguments = [|"diff";"-u";"-D";tm_to_cvs_iso8601 previous;"-D";tm_to_cvs_iso8601 current.vc_time|] in
+  let command = Array.fold_left (fun acc str -> acc ^ " \"" ^ str ^ "\"") "cvs" arguments in
+  let calc_source_dir type_str repo prefix = Printf.sprintf "%s/source/%s/%s/%s%s" root type_str (md5 repo) prefix name in
+  let cache_dir = root ^ "/cache/cvs-diff/" ^ (md5 repo) in
+  let cache_file = cache_dir ^ "/" ^ (md5 (Printf.sprintf "%s/%s %s" prefix name command)) in
+    (* cache_dir/repo_md5/(prefix/name-cmd)_md5 *)
+  let diff =
+    if Sys.file_exists cache_file then
+      let ch = open_in_bin cache_file in
+      let diff = Std.input_all ch in
+	close_in ch;
+	diff
+    else
+      begin
+	let wd = calc_source_dir "cvs" repo (if current.vc_path <> "" then current.vc_path ^ "/" else "") in
+	let buffer = Buffer.create 128 in
+	let stdout = Shell.to_buffer buffer in
+	  (try
+	     ignore (Sys.command ("mkdir -p " ^ cache_dir));
+	     Sys.chdir wd;
+	     (try
+		Shell.call ~ignore_error_code:true (* FIXME, cvs diff returns non-zero if differences are found OR an error occured, we'll just have to hope it goes well *) ~stdout ~stderr:stdout [Shell.command ~arguments (Shell_sys.lookup_executable executable)]
+	      with Shell.Subprocess_error _ -> ());
+	     Sys.chdir orig_wd;
+	   with e ->
+	     Sys.chdir orig_wd;
+	     prerr_endline ("Failed command: " ^ command);
+	     prerr_endline ("pwd: " ^ wd);
+	     raise e);
+	  let diff = Buffer.contents buffer in
+	  let cache_file_tmp = cache_file ^ ".tmp" in
+	  let ch = open_out_bin (cache_file_tmp) in
+	    output_string ch diff;
+	    close_out ch;
+	    Sys.rename cache_file_tmp cache_file;
+	    diff
+      end
+  in
+  let lines = (Pcre.split ~pat:"\n" diff) in
+    List.filter
+      (fun str ->
+	 not (str = "" || begins_with "cvs diff: Diffing " str)
+      ) lines
+;;
+
+let same_revision name a b =
+  match a, b with
+    | CVS { vc_time = previous; }, (CVS current) ->
+	(cached_cvs_diff ~name ~current ~previous) = []
+    | _ -> a = b
+;;
+
 let doctype_strict = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">";;
 let doctype_loose = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">";;
 let doctype_xhtml11 = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">";; (* TODO: UTF-8, remember the http headers. *)
@@ -36,10 +124,10 @@ let escape_html =
 let mklink link name =
   "<a href=\"" ^ link ^ "\">" ^ (escape_html name) ^ "</a>"
 
-let html_head ~ch ~file ~title =
-  Printf.fprintf ch "%s\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n%s<title>%s - WorldForge's Autobuilder</title>\n<link rel=\"icon\" href=\"/favicon.ico\" type=\"image/x-icon\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_shared.css\" type=\"text/css\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_frontpage.css\" type=\"text/css\" />\n</head>\n<body>\n<div class=\"top_menu\">%s<!--<ul>%s</ul>-->%s</div>\n"
-    doctype_xhtml11
-    meta_refresh title
+let html_head ?file ?(dynamic="") ?title ch =
+  Printf.fprintf ch "%s\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n%s<title>%sWorldForge's Autobuilder</title>\n<link rel=\"icon\" href=\"/favicon.ico\" type=\"image/x-icon\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_shared.css\" type=\"text/css\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_frontpage.css\" type=\"text/css\" />\n</head>\n<body>\n<div class=\"top_menu\">%s<!--<ul>%s</ul>-->%s</div>%s<div class=\"sub_menu\">%s</div>\n"
+    ((if match file with None -> false | Some file -> ends_with ".php" file then "<?php echo '<?xml version=\"1.0\" encoding=\"utf-8\" ?>'; ?>" else "<?xml version=\"1.0\" encoding=\"utf-8\" ?>") ^ "\n" ^ doctype_xhtml11)
+    meta_refresh (match title with None -> "" | Some t -> t ^ " - ")
     (if enable_debug_features then "Debug mode activated. This page will refresh every " ^ (if meta_refresh_interval = 10 then "ten" else Printf.sprintf "%i" meta_refresh_interval) ^ " seconds." else "")
     (List.fold_left
        (fun str (link, ext, title) ->
@@ -55,7 +143,9 @@ let html_head ~ch ~file ~title =
 	  ("#", false, "(Platforms)");
 	  ("#", false, "(Builds In Progress)");
 	] else [])))
-    "<a href=\"http://www.worldforge.org/\">WorldForge</a>'s <a href=\"/trurl/\">Autobuilder</a>";
+    ("<a href=\"http://www.worldforge.org/\">WorldForge</a>'s <a href=\"" ^ html_root ^ "\">Autobuilder</a>")
+    dynamic
+    (" <a href=\"" ^ html_root ^ "\">Frontpage</a> <a href=\"" ^ html_root ^ "snapshots.html\">Snapshot Overview</a>")
 ;;
 
 let html_foot ?(valid=true) ch =
@@ -96,8 +186,11 @@ let time_as_gears_or_time (time : float option) =
     | None -> time_as_gears time
 
 let split s c =
-  let i = String.index s c in
-    ((String.sub s 0 i), (String.sub s (i + 1) (String.length s - i - 1)))
+  try
+    let i = String.index s c in
+      ((String.sub s 0 i), (String.sub s (i + 1) (String.length s - i - 1)))
+  with Not_found ->
+    (s, "")
 
 let render_platform platform =
   let (platform, version) = split platform '-' in

@@ -21,12 +21,17 @@ type snapshot = (int * int * int * int) (* year, month, day, count *)
 
 type result = Error | Dependency_error | Warning | Information | Unknown
 type special = Timing of (Unix.tm * float)
+type section = {
+  s_result : result;
+  s_lines : (int * string * result) list;
+}
 type logfile = {
   f_step : string;
   f_filename : string;
   f_result : result;
   f_special : special option;
   f_lines : (int * string * result) list;
+(*  f_sections : section list;*)
 }
 type log = {
   l_snapshot : snapshot;

@@ -6,7 +6,7 @@ server = "irc.worldforge.org"
 port = 6667
 nick = "Trurl"
 channel = "#coders"
-new_topic = "[[ " + sys.argv[1] + " ]]"
+new_topic = "[[ http://yellow.worldforge.org/trurl/ " + sys.argv[1] + " ]]"
 
 import irclib, re, socket, time
 

@@ -51,10 +51,6 @@ let list_find_map (f : 'a -> 'b option) (lst : 'a list) : 'b =
     None -> assert false
   | Some x -> x
 
-let rules_filename = "trurl_log_rules.xml"
-let stat_self = Unix.stat Sys.argv.(0)
-let stat_rules = Unix.stat rules_filename
-
 let partial =
   try
     Sys.argv.(2) = "-partial" || Sys.argv.(3) = "-partial"
@@ -275,7 +271,7 @@ let generate_logfile ~t ~target_file file_name : logfile =
       in
 
      let o = open_out target_file in
-       RenderCommon.html_head ~ch:o ~file:target_file ~title:t;
+       RenderCommon.html_head ~file:target_file ~title:t o;
        Printf.fprintf o "<div class=\"other\">";
      let in_idx s =
        match s with
@@ -655,7 +651,7 @@ let snapshot_merge_raw ({ ts_modules = ts_modules; } as snapshot : tr_snapshot) 
     { tb_build = build; tb_host = host; tb_start = start; tb_time = time; tb_result = fold_result' (fun { f_result = f_result; } -> f_result) logs; tb_logs = logs; }
   in
   let current_platform = { current_platform with tp_builds = new_build :: current_platform.tp_builds; } in
-  let current_platform = { current_platform with tp_result = fold_result' (fun { tb_result = tb_result; } -> tb_result) current_platform.tp_builds; } in
+  let current_platform = { current_platform with tp_result = fold_result' (fun { tb_result = tb_result; } -> tb_result) current_platform.tp_builds; } in (* FIXME, this should actually be the fold of the tips of the varying hosts, or possibly just the latest build *)
   let current_module = { current_module with tm_platforms = current_platform :: other_platforms; } in
   let current_module = { current_module with tm_result = fold_result' (fun { tp_result = tp_result; } -> tp_result) current_module.tm_platforms; } in
   let snapshot = { snapshot with ts_modules = current_module :: other_modules; } in
@@ -663,11 +659,18 @@ let snapshot_merge_raw ({ ts_modules = ts_modules; } as snapshot : tr_snapshot) 
     snapshot    
 ;;
 
-let platforms = Hashtbl.create 32;;
-List.iter
-  (fun (k, v) ->
-     Hashtbl.add platforms k v
-  ) ["demitar-cat", "ubuntu-8.04"] (* FIXME, load from file *)
+let global_platforms =
+  let platforms = Hashtbl.create 32 in
+    List.iter
+      (fun (k, v) ->
+	 Hashtbl.add platforms k v
+      ) ["demitar-cat", "ubuntu-8.04"; "demitar-cat2", "windows-98"] (* FIXME, load from file *);
+    platforms
+;;
+let get_platform_by_host host =
+  try
+    Hashtbl.find global_platforms host
+  with Not_found -> "unknown"
 ;;
 
 let acc_modules dir (snapshot : tr_snapshot) revisions host build : tr_snapshot =
@@ -683,7 +686,7 @@ let acc_modules dir (snapshot : tr_snapshot) revisions host build : tr_snapshot 
       ) logs;
     Hashtbl.fold
       (fun k v snapshot ->
-	 snapshot_merge_raw snapshot (k, Hashtbl.find revisions k, Hashtbl.find platforms host, build, host, v)
+	 snapshot_merge_raw snapshot (k, Hashtbl.find revisions k, get_platform_by_host host, build, host, v)
       ) modules snapshot
 ;;
 

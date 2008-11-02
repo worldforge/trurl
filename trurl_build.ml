@@ -33,7 +33,7 @@ let build_date_path =
 
 let get_date_time () =
   let tv = Unix.gmtime (Unix.time ()) in
-  Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour + 1) (tv.Unix.tm_min + 1) (tv.Unix.tm_sec + 1)
+  Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour) (tv.Unix.tm_min) (tv.Unix.tm_sec)
 ;;
 
 Sys.command "test -d da_build_dir || mkdir da_build_dir";;
@@ -124,7 +124,8 @@ let logdir =
 ;;
 let logdir_global = logdir;;
 (*let logdir = logdir ^ "/logs";;*)
-let logdir = logdir ^ "/hosts/demitar-cat/builds/001";; (* FIXME *)
+let logdir_platform = logdir ^ "/hosts/demitar-cat"
+let logdir = logdir_platform ^ "/builds/001";; (* FIXME *)
 let () = ignore (Sys.command ("echo " ^ logdir ^ " >> global.state"));;
 
 List.iter (fun x -> ignore (Sys.command (Printf.sprintf "test -d %s || mkdir -p %s" x x))) [logdir(*; logdir_mingw32*)];;
@@ -260,7 +261,7 @@ let dump_evals meta x =
 ;;
 
 (* store revisions *)
-let tm_to_string tv = Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour + 1) (tv.Unix.tm_min + 1) (tv.Unix.tm_sec + 1)
+let tm_to_string tv = Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i" (tv.Unix.tm_year + 1900) (tv.Unix.tm_mon + 1) tv.Unix.tm_mday (tv.Unix.tm_hour) (tv.Unix.tm_min) (tv.Unix.tm_sec)
 ;;
 let store_revisions to_build =
   let ch = open_out (logdir_global ^ "/revisions") in
@@ -288,6 +289,10 @@ let store_revisions to_build =
     close_out ch
 ;;
 store_revisions to_build;;
+let store_platform () =
+  Sys.command ("lsb_release -a > " ^ (logdir_platform ^ "/platform"));
+;;
+store_platform ();;
 
 let ub = (^) "/usr/bin/";;
 
