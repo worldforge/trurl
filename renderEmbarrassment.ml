@@ -91,19 +91,19 @@ let render_embarassment ({ tm_module = project; tm_result = result; tm_revision 
 	    ^ "<li class=\"" ^ (safe_string_of_result platform_result) ^ "\">\n"
 	    ^ (RenderCommon.render_platform platform) ^ "\n" ^
 	      begin (* TODO: How do we give extensible knowledge of build-step sorting? *)
-(*	(List.map
-	  (fun (step, (result, log_filename, (*float,*) lines)) ->
-	  ) data;*)
-		let { f_step = step; f_result = step_result; f_filename = log_filename; f_lines = lines } =
+		let { f_step = step; f_result = step_result; f_filename = log_filename; f_sections = f_sections; } =
 		  List.find (fun { f_result = step_result; } -> platform_result = step_result) (sort_steps platform_logs)
 		in
-		let error_messages = (List.filter (fun (_, _, line_result) -> line_result = platform_result) lines) in
+		let error_messages = (List.filter (fun { s_result = s_result; } -> s_result = platform_result) f_sections) in
                   (mklink ("generated/" ^ log_filename) step) ^ ":" ^
 		if List.length error_messages > 0 then
 		  "<br />\n"
 		  ^ List.fold_left
-		    (fun str (line_no, line_data, line_result) -> str ^
-		      (Printf.sprintf (*"<dl>\n<dt>%i</dt><dd><tt>%s</tt></dd>\n</dl>\n"*) "<tt>%i: %s</tt><br/>\n" line_no (escape_html line_data))
+		    (fun str { s_lines = s_lines; } -> str ^
+		       (List.fold_left
+			  (fun str' (line_no, line_data, line_result) -> str' ^
+			     (Printf.sprintf (*"<dl>\n<dt>%i</dt><dd><tt>%s</tt></dd>\n</dl>\n"*) "<tt>%i: %s</tt><br/>\n" line_no (escape_html line_data))
+			  ) "" s_lines)
 		    ) "" (up_to 10 error_messages)
                     ^ (if List.length error_messages > 10 then
                          Printf.sprintf "<tt>Log contains %i more messages.</tt><br/>\n" (List.length error_messages - 10)

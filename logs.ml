@@ -391,7 +391,7 @@ let generate_logfile ~t ~target_file file_name : logfile =
           f_result = x;
           f_special = (specialized_information t input_lines);
           f_filename = Filename.basename target_file(*, !timing_data*);
-          f_lines = processed_lines; }
+	  f_sections = ((*FIXME*) List.map (fun ((_, _, result) as line) -> { s_result = result; s_lines = [line]; }) processed_lines); }
     with
       Not_found ->
 	error_endline ("unknown filetype: " ^ t ^ " (" ^ file_name ^ ")");
@@ -399,7 +399,7 @@ let generate_logfile ~t ~target_file file_name : logfile =
           f_result = Unknown;
           f_special = None;
           f_filename = source_file(*, None*);
-          f_lines = (List.map (fun (lineno, (*escaped_*)line(*, _*)) -> (lineno, (*escaped_*)line, Unknown)) input_lines); }
+          f_sections = ((*FIXME*) List.map (fun ((_, _, result) as line) -> { s_result = result; s_lines = [line]; }) (List.map (fun (lineno, (*escaped_*)line(*, _*)) -> (lineno, (*escaped_*)line, Unknown)) input_lines)); }
   )
 ;;
 

@@ -30,8 +30,7 @@ type logfile = {
   f_filename : string;
   f_result : result;
   f_special : special option;
-  f_lines : (int * string * result) list;
-(*  f_sections : section list;*)
+  f_sections : section list;
 }
 type log = {
   l_snapshot : snapshot;
