@@ -23,7 +23,7 @@ type result = Error | Dependency_error | Warning | Information | Unknown
 type special = Timing of (Unix.tm * float)
 type section = {
   s_result : result;
-  s_lines : (int * string * result * (int * string) option) list;
+  s_lines : (int * string * result * (int * string) option) list; (* (line_no, line, result, (n_regular_expression_matched, matching_regular_expression) option) *)
 }
 type logfile = {
   f_step : string;

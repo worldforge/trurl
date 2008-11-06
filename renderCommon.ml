@@ -270,6 +270,19 @@ let extract_error_lines { tp_builds = tp_builds; tp_result = tp_result; } =
     error_messages
 ;;
 
+let lines_equal_ignore_numbers a b =
+  (List.length a = List.length b) &&
+  List.fold_left2
+    (fun acc a b ->
+       (a.s_result = b.s_result) &&
+	 (List.length a.s_lines = List.length b.s_lines) &&
+	 List.fold_left2
+	 (fun acc (_, aline, ares, _) (_, bline, bres, _) ->
+	    acc && (ares = bres && aline = bline)
+	 ) true a.s_lines b.s_lines
+    ) true a b
+;;
+
 let merge_platform_errors lst =
   let rec merge acc lst =
     match lst with
@@ -278,7 +291,7 @@ let merge_platform_errors lst =
 	  let equal, tl' =
 	    List.partition
 	      (fun other_platform ->
-		 (extract_error_lines hd) = (extract_error_lines other_platform)
+		 lines_equal_ignore_numbers (extract_error_lines hd) (extract_error_lines other_platform)
 	      ) tl
 	  in
 	    merge ((hd, equal) :: acc) tl'
