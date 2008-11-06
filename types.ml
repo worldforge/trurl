@@ -23,7 +23,7 @@ type result = Error | Dependency_error | Warning | Information | Unknown
 type special = Timing of (Unix.tm * float)
 type section = {
   s_result : result;
-  s_lines : (int * string * result) list;
+  s_lines : (int * string * result * (int * string) option) list;
 }
 type logfile = {
   f_step : string;
@@ -32,13 +32,13 @@ type logfile = {
   f_special : special option;
   f_sections : section list;
 }
-type log = {
+(*type log = {
   l_snapshot : snapshot;
   l_module : string;
   l_result : result;
   l_logs : logfile list;
 }
-type logs = log list
+type logs = log list*)
 
 type tr_build = {
   tb_build : int;
@@ -50,10 +50,10 @@ type tr_build = {
 (*  tb_system : string; system hash to detect the need for rebuild and if that may be responsible for failed/fixed builds *)
 }
 type tr_platform = {
+  tp_snapshot : snapshot;
+  tp_module : string;
   tp_platform : string; (* ubuntu-8.10 *)
   tp_result : result;
-(*  tp_time : float;
-  tp_logs : logfile list;*)
   tp_builds : tr_build list;
 }
 
@@ -70,16 +70,31 @@ type vcs_revision = CVS' of Unix.tm (* Won't even try to track cvs revisions *) 
   tb_vcs : vcs * int
   tb_id : (int * int * int * int); (* year, month, day, build *)*)
 }*)
+type tr_module_building = {
+  (*  tmb_module : string;*)
+  tmb_platform : string;
+  tmb_host : string;
+}
+type tr_module_scheduled = {
+(*  tms_module : string;*)
+  tms_platform : string;
+  tms_host : string;
+}
 type tr_module = {
+  tm_snapshot : snapshot;
   tm_module : string; (* constructed name: module/branch eg: Atlas-C++/0.5 Atlas-C++/HEAD; module = basename path or /($module).git *)
   tm_revision : vcs;
   tm_result : result;
   tm_platforms : tr_platform list;
+  tm_building : tr_module_building list;
+  tm_scheduled : tr_module_scheduled list;
 }
 type tr_snapshot = {
   ts_snapshot : snapshot;
   ts_result : result;
   ts_modules : tr_module list;
+(*  ts_building : tr_snapshot_building list;
+  ts_scheduled : tr_snapshot_scheduled list;*)
 }
 type tr_logs = tr_snapshot list
 

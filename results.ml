@@ -46,8 +46,7 @@ let filter_map f l =
   List.map (fun x -> match x with None -> failwith "impossible (filter_map)" | Some x' -> x') (List.filter ((<>) None) (List.map f l))
 ;;
 
-let merge (old_results : Object.atlasobject) (transformed_logs : tr_logs) =
-  let latest_modules = ((List.hd (* we by definition only want the latest snapshot *) transformed_logs).ts_modules) in
+let merge (old_results : Object.atlasobject) latest_modules =
   let new_results =
     Object.Map
       (List.map
@@ -155,7 +154,7 @@ let now () =
   let tm = Unix.gmtime (Unix.time ()) in
     Printf.sprintf "%04i-%02i-%02i %02i:%02i:%02i" (tm.Unix.tm_year + 1900) (tm.Unix.tm_mon + 1) (tm.Unix.tm_mday) (tm.Unix.tm_hour) (tm.Unix.tm_min) (tm.Unix.tm_sec)
 
-let hooks changeset (transformed_logs : tr_logs) =
+let hooks changeset latest_modules =
   (* when updating topic first check if the generated one is identical to the existing one *)
   (* We *need* a way to skip in-progress builds. FIXME *)
   let log = open_out_gen [Open_wronly;Open_append;Open_creat] 0o644 "trurl.states.log" in
@@ -184,7 +183,6 @@ let hooks changeset (transformed_logs : tr_logs) =
           | _ :: tl -> acc errors deperrors warnings tl
     in
     let errors, deperrors, warnings =
-      let latest_modules = ((List.hd (* we by definition only want the latest snapshot *) transformed_logs).ts_modules) in
       acc [] [] [] latest_modules (* XXX probably wrong as we actually want the full list of latest results *)
     in
     let errors, deperrors, warnings =

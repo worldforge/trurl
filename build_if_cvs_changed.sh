@@ -68,9 +68,13 @@ export PATH="/usr/lib/ccache:$PATH"
         cd /home/trurl/work/
 	((test -f "$ROOT_SOURCE/git/updates" && grep -v '^Already up-to-date.$' "$ROOT_SOURCE/git/updates" > /dev/null) ||
         (test -f "$ROOT_SOURCE/cvs/updates" && egrep -v '^cvs (update|checkout): ' "$ROOT_SOURCE/cvs/updates" > /dev/null) ||
-        test -f force/build) && (rm -f force/build; echo "build" > global.state; ./trurl_build > /home/trurl/work/latest_build_log 2>&1)
+        test -f force/build) && (rm -f force/build; echo "build" > global.state; ./trurl_generate > /home/trurl/work/latest_build_log 2>&1)
+#        test -f force/build) && (rm -f force/build; echo "build" > global.state; ./trurl_build > /home/trurl/work/latest_build_log 2>&1)
+	cd /home/trurl/client/
+	(./trurl-client.sh &)
         cd /home/trurl/work/
         rm -f global.state
-	./trurl_render_log ../public_html/
+	(./update_logs.sh &)
+#	./trurl_render_log ../public_html/
     )
 ) 200>/home/trurl/work/build.lock

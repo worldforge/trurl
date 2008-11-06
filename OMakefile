@@ -6,7 +6,8 @@ OCAMLFLAGS += -dtypes
 
 USE_OCAMLFIND = true
 OCAMLPACKS = unix pcre str shell xml-light extlib cryptokit
-OCamlProgram(trurl_render_log, types config alertSort renderCommon renderEmbarrassment render parsers logs results codec_packed object)
+OCamlProgram(trurl_render_log, types config alertSort renderCommon renderEmbarrassment render parsers logs results codec_packed object util)
 OCamlProgram(trurl_build, trurl_build)
+OCamlProgram(trurl_generate, generate build util)
 
-.DEFAULT: trurl_render_log trurl_build
+.DEFAULT: trurl_render_log trurl_build trurl_generate

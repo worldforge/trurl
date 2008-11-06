@@ -56,3 +56,5 @@ let html_root =
 let rules_filename = "trurl_log_rules.xml"
 let stat_self = Unix.stat Sys.argv.(0)
 let stat_rules = Unix.stat rules_filename
+
+let snapshot_weak_limit = Some 1 (*FIXME, use lazy instead*);;

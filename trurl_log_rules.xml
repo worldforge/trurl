@@ -2,6 +2,7 @@
 <rules>
   <logtype extension="common" name="Common Rules">
     <rule regexp="^\s*$" result="Information" comment="Ignore pure-whitespace" />
+    <rule regexp="^/bin/(ba)?sh: \w+: command not found$" result="Error" />
   </logtype>
   <logtype extension="timing" name="timing">
     <rule result="Information" regexp="" comment="Unless the command actually fails (which gives us a meta error anyway) we don't really care." />
@@ -19,11 +20,15 @@
     <rule regexp=": required file `.*' not found$" result="Error"/>
     <rule regexp=": required directory .* does not exist$" result="Error"/>
     <rule regexp="Makefile.am: installing `./depcomp'$" result="Information"/>
+    <rule result="Error" regexp="^configure.ac: no proper invocation of AM_INIT_AUTOMAKE was found." />
+    <rule result="Error" regexp="^configure.ac: no proper invocation of AM_INIT_AUTOMAKE was found." />
+    <rule result="Warning" regexp="Libtool library used but `LIBTOOL\\' is undefined" />
   </logtype>
   <logtype extension="configure" name="./configure">
     <rule regexp="cppunit.*WARNING" result="Dependency_error"/>
     <rule regexp="^configure: WARNING: Couldn't find Avahi. Avahi support will be disabled.$" result="Dependency_error"/>
     <rule regexp="configure: error: " result="Dependency_error"/>
+<!--    <rule regexp="\./configure: line \d+: .*error" result="Dependency_error"/>-->
     <rule regexp="^checking " result="Information"/>
     <rule regexp="^(configure|config.status): (creating|executing depfiles commands)" result="Information"/>
     <rule result="Information" regexp="^appending configuration tag .* to libtool"/>
@@ -35,10 +40,17 @@
 *** or that you have moved psql since it was installed. In the latter case, you
 *** may want to edit the pg_config script: /usr/bin/pg_config
     </rule>
+    <rule result="Dependency_error" regexp="^configure: error:$" />
+    <rule result="Dependency_error" regexp="^Cannot find valid versions of required WorldForge libraries:$" />
+    <rule result="Dependency_error" regexp="^Cannot find valid versions of required WorldForge maths library, wfmath:$" />
+    <rule result="Dependency_error" regexp="^No package '.*' found" />    
+    <rule result="Dependency_error" regexp="You do not have DevIL installed" />
+    <rule result="Dependency_error" regexp="^Cannot find python headers for Python \d+.\d+ or later\.$" />
+    <rule result="Dependency_error" regexp="Cannot find PostgreSQL config or config failed" />
   </logtype>
   <logtype extension="make_all" name="make all" prepend_rules="common" >
     <rule regexp="^make(\[\d+\])?: \*\*\* \[.*\] Error \d+" result="Error" />
-    <rule regexp="^make: \*\*\* No rule to make target `.*'\.  Stop.$" result="Error" />
+    <rule regexp="^make(\[\d+\])?: \*\*\* No rule to make target `.*'\.\s+Stop.$" result="Error" />
     <rule regexp="^[^:]+:(\d+:)* ((syntax|parse) error|error:|#error|`[^']+' undeclared) " result="Error" />
     <rule regexp="^OgrePagingLandScapeSceneManager\.cpp:\d+: warning: passing '((const )?Ogre::Real|float)' for argument \d+ to '.*'$" result="Information" comment="suppressing ember ogre warnings" />
     <rule regexp="^OgreOpcodeCharacterController\.cpp:\d+:(\d+:)? warning: no newline at end of file$" result="Information" comment="suppressing ember ogre warnings" />
@@ -48,7 +60,7 @@
     <rule regexp="^libtool: link: warning: " result="Warning" />
     <rule regexp="^libtool: link: cannot find the library" result="Error" />
     <rule regexp="^  .* Warning\)" result="Warning" />
-    <rule regexp="\.h: No such file or directory$" result="Error" />
+    <rule regexp="\.(h|cpp): No such file or directory$" result="Error" />
     <rule regexp="^make  all-\w+" result="Information" />
     <rule regexp="^/usr/bin/make\s+all-\w+" result="Information" />
     <rule regexp="^Making all in \w+" result="Information" />
@@ -56,6 +68,9 @@
     <rule regexp="^\s*(if|then) " result="Information" />
     <!--<rule regexp="^\s*(g(\+\+|cc)|/bin/sh ../libtool) .* [a-zA-Z-_./]*(error|warning)[a-zA-Z-_]*\.(cpp|o|c|lo)" result="Information" />-->
     <rule regexp="^\s*(g(\+\+|cc)|/bin/sh (../)*libtool) .* ([a-zA-Z-_]*\.(cpp|o|c|lo|la)|.libs/.*)" result="Information" />
+    <rule regexp="^libtool: (compile|link):\s+(g(\+\+|cc) |ar cru .libs/)" result="Information" />
+    <rule regexp="^/bin/(ba)?sh (\.\./)+libtool --tag=CXX " result="Information" />
+    <rule regexp="^mv -f .deps/[-a-z0-9A-Z_]*error.Tpo .deps/[-a-z0-9A-Z_]*error.Plo$" result="Information" />
     <rule regexp="mkdir .libs" result="Information" />
     <rule regexp="creating \w+" result="Information" />
     <rule regexp="^ar cru .libs/lib\w+" result="Information" />
@@ -71,6 +86,8 @@
     <rule regexp="^[a-z]+.(c|h|cpp): In function '[a-z_.]+':$" result="Information" />
     <rule regexp="^.*\.s?o: undefined reference to `.*'$" result="Error" />
     <rule regexp="^collect2: ld returned 1 exit status$" result="Error" />
+    <!-- (?<!-W)(?<!-lgpg-)error(?!\\.(Tpo|Po|Plo|lo|cpp)) -->
+    <rule regexp="^g(\+\+|cc): No such file or directory$" result="Error" />
   </logtype>
   <logtype extension="make_install" name="make install" prepend_rules="make_all">
     <rule regexp="^Making install in \w+$" result="Information" />

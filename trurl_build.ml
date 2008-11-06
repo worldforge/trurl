@@ -111,6 +111,7 @@ let autotools ?(pre=[]) ?(post=[]) ?(patch=[]) ?(debug=true) ?(configure=(fun _ 
       autotools_mingw32_src ~configure_args ~patch ()
   ) @ post
 
+let base_logdir = Sys.getcwd () ^ "/logs"
 let logdir = Sys.getcwd () ^ "/logs/" ^ build_date_path
 let logdir =
   let rec aux n =
@@ -123,6 +124,7 @@ let logdir =
   in aux 1
 ;;
 let logdir_global = logdir;;
+
 (*let logdir = logdir ^ "/logs";;*)
 let logdir_platform = logdir ^ "/hosts/demitar-cat"
 let logdir = logdir_platform ^ "/builds/001";; (* FIXME *)
@@ -401,9 +403,6 @@ List.iter
 		)
 		~assignments:[Shell.stderr >& Shell.stdout] ~environment m);
 	    List.iter (fun f -> f ()) !cleanup;
-            (* generate logs *)
-            Sys.chdir real_root;
-            ignore (Sys.command "./trurl_render_log ../public_html/");
 	  end with
 	    ex -> 
 	      prerr_endline ("Unable to perform build step due to unexpected event:\n" ^ (Printexc.to_string ex));
@@ -412,5 +411,8 @@ List.iter
         end;
       ) t.modules;
     Printf.eprintf "debug: build end %s\n" t.name; flush stderr;
+    (* generate logs *)
+    Sys.chdir real_root;
+    ignore (Sys.command "./trurl_render_log ../public_html/");
      end
   ) to_build

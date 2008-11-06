@@ -55,47 +55,12 @@ let render_out ~errors ~matched_lines ~total_lines ~warnings ~dep_err =
     Printf.sprintf "E%i, W%i%s%s" !errors !warnings (if !dep_err > 0 then Printf.sprintf ", D%i" !dep_err else "") (if !matched_lines <> !total_lines then Printf.sprintf ", ?%i" (!total_lines - !matched_lines) else "")
   else "All ok."
     
-    
-(*  let imperative_timing = ref None
-  let parse_timing ~cb i =
-    Scanf.sscanf i "BUILD %s %s %i-%i-%i %i:%i:%i"
-      (fun state target year mon mday hour min sec ->
-	let (t, _) = Unix.mktime {
-	  Unix.tm_sec = sec;
-   	  Unix.tm_min = min;
-   	  Unix.tm_hour = hour;
-   	  Unix.tm_mday = mday;
-   	  Unix.tm_mon = mon;
-   	  Unix.tm_year = year - 1900;
-	  
-   	  Unix.tm_wday = 0;
-   	  Unix.tm_yday = 0;
-   	  Unix.tm_isdst = false;
-	} in
-	match state with
-	  "BEGIN" ->
-	    imperative_timing := Some t;
-            Time_begin
-	| "END" ->
-	    (match !imperative_timing with
-	      Some ot ->
-		let tdiff = t -. ot in
-		cb.time tdiff;
-		imperative_timing := None
-	    | None -> error_endline "Timing.END but no previous time");
-            Time_end
-	| _ ->
-            Unmatched
-      )
-(*     imperative_timings := (e -. b) :: !imperative_timings; *)
-(*     Information, *)
-(*     (let seconds = (int_of_float (e -. b)) in *)
-(*     let minutes = seconds / 60 in *)
-(*     Printf.sprintf "%i:%02i" minutes (seconds - (minutes * 60))) *)
-*)
 let __parse lst ~(cb : callbacks) line =
-  snd (List.find
+  let n_tested = ref 0 in
+  let (rex, res) =
+    (List.find
          (fun (rex, _) ->
+	    incr n_tested;
             try
               ignore (Pcre.exec ~rex:(Pcre.regexp ~flags:[`CASELESS(*;`UTF8*)] rex) line); true
             with Not_found ->
@@ -104,4 +69,5 @@ let __parse lst ~(cb : callbacks) line =
                   prerr_string "Bad pattern: ";
                   error_endline rex;
                   raise e
-         ) (lst @ ["(?<!-W)(?<!-lgpg-)error(?!\\.(Tpo|Po|Plo|lo|cpp))", Error; "warn", Warning;]))
+         ) (lst @ ["(?<!-W)error", Error; "warn", Warning;]))
+  in res, (!n_tested, rex)

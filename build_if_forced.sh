@@ -4,5 +4,6 @@
     flock -x -w 30 210 && (
         cd /home/trurl/work/
         (test -f force/build || test -f force/update) && (./build_if_cvs_changed.sh)
+        (test -f force/render) && (./update_logs.sh)
     )
 ) 210>/home/trurl/work/force/.lock
