@@ -70,7 +70,7 @@
     <rule regexp="^\s*(g(\+\+|cc)|/bin/sh (../)*libtool) .* ([a-zA-Z-_]*\.(cpp|o|c|lo|la)|.libs/.*)" result="Information" />
     <rule regexp="^libtool: (compile|link):\s+(g(\+\+|cc) |ar cru .libs/)" result="Information" />
     <rule regexp="^/bin/(ba)?sh (\.\./)+libtool --tag=CXX " result="Information" />
-    <rule regexp="^mv -f .deps/[-a-z0-9A-Z_]*error.Tpo .deps/[-a-z0-9A-Z_]*error.Plo$" result="Information" />
+    <rule regexp="^mv -f .deps/[-a-z0-9A-Z_]*error.Tpo .deps/[-a-z0-9A-Z_]*error.Pl?o$" result="Information" />
     <rule regexp="mkdir .libs" result="Information" />
     <rule regexp="creating \w+" result="Information" />
     <rule regexp="^ar cru .libs/lib\w+" result="Information" />
