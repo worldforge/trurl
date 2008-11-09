@@ -603,8 +603,9 @@ let load_platform base =
 
 let acc_builds dir snapshot revisions host : tr_snapshot =
   let builds = rsort (list_dir dir) in
+  let builds =
     List.fold_left
-      (fun snapshot build ->
+      (fun (n, snapshot) build ->
 	 let base = (dir ^ "/" ^ build) in
 	 let modules_dir =
 	   if Sys.file_exists (base ^ "/modules") then
@@ -617,8 +618,12 @@ let acc_builds dir snapshot revisions host : tr_snapshot =
 	   else None
 	 in
 	 let platform = load_platform base in
-	   acc_modules checkpoints modules_dir snapshot revisions platform host (int_of_string build)
-      ) snapshot builds
+	   if n > 3 then (* FIXME, use lazy and possibly build list info and only reparse those that are missing *)
+	     (n, snapshot)
+	   else
+	     (n + 1, trace ~skip:true ("parse.build." ^ build) (acc_modules checkpoints modules_dir snapshot revisions platform host) (int_of_string build))
+      ) (0, snapshot) builds
+  in snd builds
 ;;
 
 let acc_hosts dir snapshot revisions : tr_snapshot =
@@ -636,30 +641,36 @@ let acc_snapshots dir : tr_snapshot list =
     let years = rsort (list_dir dir) in
       List.map
 	(fun year ->
-	   let months = rsort (list_dir (dir ^ "/" ^ year)) in
-	     List.map
-	       (fun month ->
-		  let days = rlist_dir (dir ^ "/" ^ year ^ "/" ^ month) in
-		    List.map
-		      (fun day ->
-			 let snaps = rlist_dir (dir ^ "/" ^ year ^ "/" ^ month ^ "/" ^ day) in
-			   if (*FIXME, instead use lazy values*) (match snapshot_weak_limit with None -> false | Some snapshot_weak_limit -> !n_acc_snapshots >= snapshot_weak_limit) then
-			     []
-			   else
-			     List.map
-			       (fun snap ->
-				  incr n_acc_snapshots;
-				  let snapshot = (int_of_string year, int_of_string month, int_of_string day, int_of_string snap) in
-				  let snapshot_dir = dir ^ "/" ^ year ^ "/" ^ month ^ "/" ^ day ^ "/" ^ snap in
-				  let revisions_file = (snapshot_dir ^ "/revisions") in
-				    if not (Sys.file_exists revisions_file) then
-				      []
-				    else
-				      let revisions = parse_revisions revisions_file in
-					[(*FIXME*)acc_hosts (snapshot_dir ^ "/" ^ "hosts") { ts_snapshot = snapshot; ts_result = Unknown; ts_modules = []; } revisions]
-			       ) (snaps)
-		      ) (days)
-	       ) (months)
+	   if !n_acc_snapshots >= snapshot_hard_limit (*FIXME, instead use lazy *) then
+	     []
+	   else
+	     let months = rsort (list_dir (dir ^ "/" ^ year)) in
+	       List.map
+		 (fun month ->
+		    if !n_acc_snapshots >= snapshot_hard_limit (*FIXME, instead use lazy *) then
+		      []
+		    else
+		      let days = rlist_dir (dir ^ "/" ^ year ^ "/" ^ month) in
+			List.map
+			  (fun day ->
+			     if !n_acc_snapshots >= snapshot_hard_limit (*FIXME, instead use lazy *) then
+			       []
+			     else
+			       let snaps = rlist_dir (dir ^ "/" ^ year ^ "/" ^ month ^ "/" ^ day) in
+				 List.map
+				   (fun snap ->
+				      let snapshot = (int_of_string year, int_of_string month, int_of_string day, int_of_string snap) in
+				      let snapshot_dir = dir ^ "/" ^ year ^ "/" ^ month ^ "/" ^ day ^ "/" ^ snap in
+				      let revisions_file = (snapshot_dir ^ "/revisions") in
+					if !n_acc_snapshots >= snapshot_hard_limit || not (Sys.file_exists revisions_file) then
+					  []
+					else
+					  ( incr n_acc_snapshots;
+					    let revisions = parse_revisions revisions_file in
+					      [trace ("parse.snapshot." ^ (snapshot_safe_string snapshot)) ((*FIXME*)acc_hosts (snapshot_dir ^ "/" ^ "hosts") { ts_snapshot = snapshot; ts_result = Unknown; ts_modules = []; }) revisions] )
+				   ) (snaps)
+			  ) (days)
+		 ) (months)
 	) (years)
   in
     (List.concat (List.concat (List.concat (List.concat acc))))
