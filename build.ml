@@ -112,7 +112,7 @@ let get_build_list () =
       cvs "libs" "wfmath";
       cvs "libs" "mercator";
       cvs "libs" "sage";
-      cvs "libs" "eris";
+      git "eris";
       (*cvs "scratchpad" "tree";*)
       cvs "tools" "entityforge";
       cvs "servers" "indri";

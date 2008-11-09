@@ -6,7 +6,7 @@ export PATH="/usr/lib/ccache:$PATH"
         #cd /home/trurl/work/forge/
         #cvs -z6 update > ../cvs.forge.update 2>&1
 	REPOS='cvs%:pserver:cvsanon@cvs.worldforge.org:2401/home/cvspsrv/worldforge%forge'
-	for MODULE in ember sear libwfut; do
+	for MODULE in ember sear libwfut eris; do
             REPOS="$REPOS git%git://git.worldforge.org/$MODULE.git%$MODULE"
         done
 	ROOT=/home/trurl/work
