@@ -62,6 +62,8 @@ function trurl_string_begins_with($haystack, $needle)
 }
 
 function trurl_global_state() {
+  global $trurl_hosts_seen;
+  
   if (file_exists("/home/trurl/work/force/build") || file_exists("/home/trurl/work/force/update")) {
     $state = 'update';    
   } else {
@@ -132,7 +134,7 @@ function trurl_global_state() {
   switch ($state) {
     case 'build':
       echo "<img src=\"static/images/building.png\" alt=\"\" /> Building</p>\n";
-      echo "<p class=\"global eta\">"; echo ($hosts_seen - $hosts_finished) . "/$hosts_seen hosts building.</p>\n";
+      echo "<p class=\"global eta\">"; echo ($hosts_seen - $hosts_finished) . "/$trurl_hosts_seen hosts building.</p>\n";
       // XXX abort build (combine with force command?)
       /*      echo "<p class=\"global buttons\">";
   echo "<form action=\"action.php\" method=\"post\">";

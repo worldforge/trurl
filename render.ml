@@ -262,7 +262,21 @@ let frontpage (logs : tr_logs) module_hash current_modules =
   (* dump glance *)
     let file = "index.php" in
   let ch = open_out (Filename.concat target_dir file) in
-  html_head ~dynamic:"<?php require_once('static/trurl.php');  trurl_global_state(); ?>\n" ~file ~title:"Frontpage" ch;
+  let hosts_seen =
+    let hosts_acc = Hashtbl.create 16 in
+      List.iter
+	(fun m ->
+	   List.iter
+	     (fun p ->
+		List.iter
+		  (fun b ->
+		     Hashtbl.replace hosts_acc b.tb_host ()
+		  ) p.tp_builds
+	     ) m.tm_platforms
+	) logs.tl_tip;
+      Hashtbl.length hosts_acc
+  in
+  html_head ~dynamic:(Printf.sprintf "<?php $trurl_hosts_seen = %i; require_once('static/trurl.php');  trurl_global_state(); ?>\n" hosts_seen) ~file ~title:"Frontpage" ch;
   let fame, other =
     List.partition
       (fun { tm_result = c1 } (*(_, (c1 : result), _, _)*) ->
