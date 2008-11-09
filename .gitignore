@@ -8,3 +8,6 @@ trurl_build
 trurl_build.run
 trurl_render_log
 trurl_render_log.run
+trurl_generate
+trurl_generate.run
+static/images/*
