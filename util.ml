@@ -78,12 +78,12 @@ let begins_with pattern string =
 let global_trace_indent = ref 0;;
 let trace ?(skip=false) name (f : 'a -> 'b) (arg : 'a) : 'b = (* FIXME, add timestamps and make runtime optional *)
   if not skip then
-    let start = Unix.time () in
+    let start = Unix.gettimeofday () in
       for x=0 to !global_trace_indent do prerr_string "  " done;
       incr global_trace_indent;
       prerr_endline ("begin " ^ name);
       let res = f arg in
-      let finish = Unix.time () in
+      let finish = Unix.gettimeofday () in
       let delta = finish -. start in
 	decr global_trace_indent;
 	for x=0 to !global_trace_indent do prerr_string "  " done;
