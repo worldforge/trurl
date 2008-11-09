@@ -188,23 +188,7 @@ let href_of_project project =
   "<a href=\"" ^ project_url project ^ "\">" ^ project ^ "</a>"
 ;;
 
-let fmt' uptime =
-  let rec fmt acc =
-    match acc with
-	[] -> 
-	  Printf.sprintf "%.1f seconds" uptime
-      | ((name, seconds) :: acc) ->
-	  let t = uptime /. (float seconds) in
-	    if t >= 1. then begin
-	      if (truncate (t *. 10.)) = 10 then
-	        Printf.sprintf "%.0f %s" t name
-	      else
-	        Printf.sprintf "%.1f %ss" t name
-	    end else
-	      fmt acc
-  in
-    fmt ["year", 365*24*60*60; "month", 30*24*60*60; "week", 7*24*60*60; "day", 24*60*60; "hour", 60*60; "minute", 60; "second", 1]
-;;
+let fmt' = Util.time_string;;
 
 let time_as_gears time =
   (if time = None then "<img src=\"static/images/gears.png\" alt=\"building\" />" else "")
