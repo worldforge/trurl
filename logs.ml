@@ -662,12 +662,13 @@ let acc_snapshots dir : tr_snapshot list =
 				      let snapshot = (int_of_string year, int_of_string month, int_of_string day, int_of_string snap) in
 				      let snapshot_dir = dir ^ "/" ^ year ^ "/" ^ month ^ "/" ^ day ^ "/" ^ snap in
 				      let revisions_file = (snapshot_dir ^ "/revisions") in
-					if !n_acc_snapshots >= snapshot_hard_limit || not (Sys.file_exists revisions_file) then
+				      let hosts_dir = (snapshot_dir ^ "/" ^ "hosts") in
+					if !n_acc_snapshots >= snapshot_hard_limit || not (Sys.file_exists revisions_file) || not (Sys.file_exists hosts_dir) then
 					  []
 					else
 					  ( incr n_acc_snapshots;
 					    let revisions = parse_revisions revisions_file in
-					      [trace ("parse.snapshot." ^ (snapshot_safe_string snapshot)) ((*FIXME*)acc_hosts (snapshot_dir ^ "/" ^ "hosts") { ts_snapshot = snapshot; ts_result = Unknown; ts_modules = []; }) revisions] )
+					      [trace ("parse.snapshot." ^ (snapshot_safe_string snapshot)) ((*FIXME*)acc_hosts hosts_dir { ts_snapshot = snapshot; ts_result = Unknown; ts_modules = []; }) revisions] )
 				   ) (snaps)
 			  ) (days)
 		 ) (months)
