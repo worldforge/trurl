@@ -64,3 +64,17 @@ let highest_alert_compare =
       )
   ;;
 
+  let fold_result_high_to_low ext lst =
+    List.fold_left
+      (fun acc item2 ->
+	 highest_alert (acc) (ext item2)
+      ) Unknown lst
+  ;;
+
+  let fold_result_modules m =
+    fold_result_high_to_low (fun x -> x.tm_result) m
+  ;;
+
+  let fold_result_platforms m =
+    fold_result_high_to_low (fun x -> x.tp_result) m
+  ;;

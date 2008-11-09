@@ -480,6 +480,7 @@ let equal_modules a b =
   a.tm_module = b.tm_module &&
   (same_revision a.tm_module a.tm_revision b.tm_revision) &&
   a.tm_result = b.tm_result (* FIXME *) &&
+  (* ignore tm_result and verify that for all tm_platforms in a the result lines are equal to those in b and the other way around, if so, merge missing platforms into b and return b *)
   (List.length a.tm_platforms) = (List.length b.tm_platforms) (* is this correct? FIXME *) &&
   List.fold_left2
   (fun acc a' b' ->
