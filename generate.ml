@@ -68,13 +68,32 @@ let ready snapshot template target build_list =
   let p = Buffer.add_string output in
     p bash_pre;
     List.iter
-      (fun { Build.m_module = m_module; m_steps = m_steps; m_revision = m_revision; m_source_dir = m_source_dir; } ->
+      (fun { Build.m_module = m_module; m_steps = m_steps; m_revision = m_revision; m_source_dir = m_source_dir; m_patch = m_patch; } ->
 	 let safe_m_module = safe m_module in
-	 let m_replace_lst = ["@@MODULE@@", m_module; "@@module@@", safe_m_module] in
+	 let (safe_m_patch, safe_m_patch_strip) =
+	   match m_patch with
+	       None
+	     | Some (_, []) ->
+		 ("", "")
+	     | Some (depth, _) ->
+		 (safe_m_module ^ "_has_patch", string_of_int depth)
+	 in
+	 let m_replace_lst = ["@@MODULE@@", m_module; "@@module@@", safe_m_module; "@@patch@@", safe_m_patch; "@@patch-strip@@", safe_m_patch_strip] in
 	 let client_source_dir = (Build.global_root ^ "/client_source/" ^ snapshot') in
 	   ignore (Sys.command (Printf.sprintf "test -d '%s' || mkdir -p '%s'" client_source_dir client_source_dir));
 	   Sys.chdir (m_source_dir);
 	   ignore (Sys.command (Printf.sprintf "tar czf \"%s\"/%s.tar.gz --exclude=CVS --exclude=.git  ." client_source_dir safe_m_module));
+	   (match m_patch with
+		None
+	      | Some (_, []) ->
+		  ()
+	      | Some (_, files) ->
+		  ignore (Sys.command (Printf.sprintf "rm -f \"%s\"/%s.patch" client_source_dir safe_m_module));
+		  List.iter
+		    (fun (a, b) ->
+		       ignore (Sys.command (Printf.sprintf "diff -u -N \"%s\" \"%s\" >> \"%s\"/%s.patch" a b client_source_dir safe_m_module));
+		    ) files
+	   );
 	   (*@@tar up correct revision FIXME: use git-tarish to enable going back in time*)
 	   p (replace_lst bash_mpre m_replace_lst);
 	   let render_step =

@@ -25,6 +25,21 @@ let md5 str =
   Cryptokit.transform_string (Cryptokit.Hexa.encode ()) (Cryptokit.hash_string (Cryptokit.Hash.md5 ()) str)
 ;;
 
+let equator_patch =
+  (2,
+   List.map
+     (fun file ->
+	("../equator/visual/" ^ file, "../apogee/visual/" ^ file)
+     ) [ "GL.h"; "GLU.h";
+	 "default_texture.h";
+	 "Texture.cpp"; "Texture.h";
+	 "Model.cpp"; "Model.h";
+	 "EntityRenderer.cpp"; "EntityRenderer.h";
+	 "3dsRenderer.cpp"; "3dsRenderer.h";
+	 "Cal3dRenderer.cpp"; "Cal3dRenderer.h";
+	 "TerrainRenderer.cpp"; "TerrainRenderer.h";
+	 "ForestRenderer.cpp"; "ForestRenderer.h"; ] )
+
 let make_snapshot_dir () =
   let base_logdir = global_logs in
   let (build_date_path, (y, m, d)) =
@@ -74,7 +89,7 @@ let get_vcs_tip name vcs =
 ;;
 
 type b_step = { s_step : string; s_command : string; s_environment : (string * string) list; s_required : bool; }
-type b_module = { m_module : string; m_steps : b_step list; m_revision : vcs; m_source_dir : string; }
+type b_module = { m_module : string; m_steps : b_step list; m_revision : vcs; m_source_dir : string; m_patch : (int (* strip depth *) * (string * string) list (* (source file, target file) list *)) option; }
 
 let get_build_list () =
   let step ?(environment=[]) ?(required=true) step command =
@@ -90,18 +105,19 @@ let get_build_list () =
       step ~required:false "make_install" "make install";
     ]
   in
-  let module_ vcs m =
+  let module_ ~patch vcs m =
     let vcs, source_dir = get_vcs_tip m vcs in
       
-      { m_module = m; m_revision = vcs; m_source_dir = source_dir; m_steps = automake; }
+      { m_module = m; m_revision = vcs; m_source_dir = source_dir; m_steps = automake;
+	m_patch = patch; }
   in
-  let cvs path m =
+  let cvs ?patch path m =
     let vcs = (`cvs (":pserver:cvsanon@cvs.worldforge.org:2401/home/cvspsrv/worldforge", ("forge/" ^ path), "HEAD")) in
-      module_ vcs m
+      module_ ~patch vcs m
   in
-  let git m =
+  let git ?patch m =
     let vcs = (`git (Printf.sprintf "git://git.worldforge.org/%s.git" m, "master")) in
-      module_ vcs m
+      module_ ~patch vcs m
   in
     [
       git "libwfut";
@@ -118,7 +134,7 @@ let get_build_list () =
       cvs "servers" "indri";
       cvs "servers" "cyphesis-C++";
       cvs "servers" "venus";
-      cvs "clients" "equator";
+      cvs ~patch:equator_patch "clients" "equator";
       cvs "clients" "apogee";
       cvs "clients" "silence";
       cvs "clients" "process";

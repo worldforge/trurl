@@ -96,12 +96,16 @@ function error {
     
     cd "$ROOT" &&
     URL="$HTTP_SOURCE_ROOT"/"$SNAPSHOT"/@@module@@.tar.gz
+    URL_PATCH="$HTTP_SOURCE_ROOT"/"$SNAPSHOT"/@@module@@.patch
     ($CURL -o @@module@@.tar.gz "$URL" || error "$HOST" "$SNAPSHOT" "$BUILD" 'ready.source.download' "$URL") &&
+    (if [ x@@patch@@ != x ]; then ($CURL -o @@module@@.patch "$URL_PATCH" || error "$HOST" "$SNAPSHOT" "$BUILD" 'ready.patch.download' "$URL_PATCH"); fi) &&
     
     {
 	mkdir -p "$BUILD_ROOT"/@@module@@ &&
 	cd "$BUILD_ROOT"/@@module@@ &&
-	(tar xzf "$ROOT"/@@module@@.tar.gz || error "$HOST" "$SNAPSHOT" "$BUILD" 'ready.source.unpack' "$HTTP_ROOT"/source/"$SNAPSHOT"/@@module@@.tar.gz)
+	(tar xzf "$ROOT"/@@module@@.tar.gz || error "$HOST" "$SNAPSHOT" "$BUILD" 'ready.source.unpack' "$URL") &&
+	(if [ x@@patch@@ != x ]; then ((patch -p@@patch-strip@@ < "$ROOT"/@@module@@.patch > /dev/null) || error "$HOST" "$SNAPSHOT" "$BUILD" 'ready.patch.apply' "$URL_PATCH"); fi)
+
     } &&
     
     {
