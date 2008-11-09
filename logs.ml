@@ -24,23 +24,6 @@ open Config;;
 open Util;;
 open ExtLib;;
 
-let find_special (logs : logfile list) =
-  let rec aux lst =
-    match lst with
-        [] -> None
-      | { f_special = hd } :: tl ->
-          match hd with
-              None -> aux tl
-            | Some _ -> hd
-  in aux logs
-;;
-
-let find_timing logs =
-  match find_special logs with
-      None -> None
-    | Some Timing x -> Some x
-;;
-
 let fold_result l = (List.fold_left AlertSort.highest_alert Unknown) l;;
 let fold_result' f l = fold_result (List.map f l);;
 
@@ -172,64 +155,6 @@ let match_log s f =
     let dir = Str.matched_group 1 s in
     let data = Str.matched_group 2 s in
     f dir data
-;;
-    
-type line_count = {
-    error : int;
-    warning : int;
-    dependency_error : int;
-    good : int;
-    don't_care : int;
-    not_our_fault : int;
-    induced_warning : int;
-    add : int;
-    delete : int;
-    time_begin : int;
-    time_end : int;
-    unmatched : int;
-  }
-
-let specialized_information t input_lines =
-  match t with
-      "timing" ->
-        if List.length input_lines > 1 then
-          ( let imperative_timing, timing = ref None, ref (Unix.gmtime 0.0, 0.0) in
-              List.iter
-                (fun (_, i) ->
-                   try
-                   Scanf.sscanf i "BUILD %s %s %i-%i-%i %i:%i:%i"
-                     (fun state target year mon mday hour min sec ->
-	                let (t, t') = Unix.mktime {
-	                  Unix.tm_sec = sec;
-   	                  Unix.tm_min = min;
-   	                  Unix.tm_hour = hour;
-   	                  Unix.tm_mday = mday;
-   	                  Unix.tm_mon = mon - 1;
-   	                  Unix.tm_year = year - 1900;
-	                  (* ignored *)
-   	                  Unix.tm_wday = 0;
-   	                  Unix.tm_yday = 0;
-   	                  Unix.tm_isdst = false;
-	                } in
-	                  match state with
-	                      "BEGIN" ->
-				timing := (t', 0.0);
-	                        imperative_timing := Some t
-	                    | "END" ->
-	                        (match !imperative_timing with
-	                             Some ot ->
-		                       let tdiff = t -. ot in
-		                         timing := (fst (!timing), tdiff);
-		                         imperative_timing := None
-	                           | None -> error_endline "Timing.END but no previous time")
-	                    | _ ->
-                                ()
-                     )
-                   with _ -> error_endline "Failed scanning Timing"
-                ) input_lines;
-          Some (Timing (!timing)) (* FIXME *) )
-        else None
-    | _ -> None
 ;;
 
 let pattern_info pattern =
@@ -407,7 +332,6 @@ let generate_logfile ~tm_module ~t ~target_file file_name : logfile =
       in
         { f_step = t;
           f_result = x;
-          f_special = (specialized_information t input_lines);
           f_filename = Filename.basename target_file(*, !timing_data*);
 	  f_sections = ((*FIXME*) List.map (fun ((_, _, result, _) as line) -> { s_result = result; s_lines = [line]; }) processed_lines); }
 	    end 
@@ -415,7 +339,6 @@ let generate_logfile ~tm_module ~t ~target_file file_name : logfile =
 	error_endline ("unknown filetype: " ^ t ^ " (" ^ file_name ^ ")");
 	{ f_step = t;
           f_result = Unknown;
-          f_special = None;
           f_filename = source_file(*, None*);
           f_sections = ((*FIXME*) List.map (fun ((_, _, result, _) as line) -> { s_result = result; s_lines = [line]; }) (List.map (fun (lineno, (*escaped_*)line(*, _*)) -> (lineno, (*escaped_*)line, Unknown, None)) input_lines)); }
   )
@@ -528,7 +451,7 @@ let vcs_same_branch vcs vcs' =
 ;;
 
 let snapshot_merge_raw ({ ts_modules = ts_modules; ts_snapshot = ts_snapshot; } as snapshot : tr_snapshot) (module_name, revision, platform, build, host, checkpoint, logs) : tr_snapshot =
-  if (match checkpoint with Some (Some _, Some _) -> false | _ -> true) && find_timing logs = None then (* Skip incomplete builds *)
+  if (match checkpoint with Some (Some _, Some _) -> false | _ -> true) then (* Skip incomplete builds *)
     snapshot
   else
   let current_module, other_modules =
@@ -569,10 +492,7 @@ let snapshot_merge_raw ({ ts_modules = ts_modules; ts_snapshot = ts_snapshot; } 
 	      (s, e' -. s')
 	| Some (None, Some _) (* undefined *)
 	| Some (None, None)
-	| None ->
-	    match find_timing logs with
-		None -> Unix.gmtime 0.0, 0.0
-	      | Some t -> t
+	| None -> Unix.gmtime 0.0, 0.0
     in
       { tb_build = build; tb_host = host; tb_start = start; tb_time = time; tb_result = fold_result' (fun { f_result = f_result; } -> f_result) logs; tb_logs = logs; }
   in

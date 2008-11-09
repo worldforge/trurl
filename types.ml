@@ -20,7 +20,6 @@
 type snapshot = (int * int * int * int) (* year, month, day, count *)
 
 type result = Error | Dependency_error | Warning | Information | Unknown
-type special = Timing of (Unix.tm * float)
 type section = {
   s_result : result;
   s_lines : (int * string * result * (int * string) option) list; (* (line_no, line, result, (n_regular_expression_matched, matching_regular_expression) option) *)
@@ -29,16 +28,8 @@ type logfile = {
   f_step : string;
   f_filename : string;
   f_result : result;
-  f_special : special option;
   f_sections : section list;
 }
-(*type log = {
-  l_snapshot : snapshot;
-  l_module : string;
-  l_result : result;
-  l_logs : logfile list;
-}
-type logs = log list*)
 
 type tr_build = {
   tb_build : int;
@@ -47,7 +38,6 @@ type tr_build = {
   tb_time : float;
   tb_result : result;
   tb_logs : logfile list;
-(*  tb_system : string; system hash to detect the need for rebuild and if that may be responsible for failed/fixed builds *)
 }
 type tr_platform = {
   tp_snapshot : snapshot;
