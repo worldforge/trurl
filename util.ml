@@ -39,6 +39,24 @@ let iso8601_to_tm_utc str =
 	 Scanf.sscanf str "%04i-%02i-%02iT%02i:%02i:%02i+00:00" f)
 ;;
 
+let time_string uptime =
+  let rec fmt acc =
+    match acc with
+	[] -> 
+	  Printf.sprintf "%.1f seconds" uptime
+      | ((name, seconds) :: acc) ->
+	  let t = uptime /. (float seconds) in
+	    if t >= 1. then begin
+	      if (truncate (t *. 10.)) = 10 then
+	        Printf.sprintf "%.0f %s" t name
+	      else
+	        Printf.sprintf "%.1f %ss" t name
+	    end else
+	      fmt acc
+  in
+    fmt ["year", 365*24*60*60; "month", 30*24*60*60; "week", 7*24*60*60; "day", 24*60*60; "hour", 60*60; "minute", 60; "second", 1]
+;;
+
 let md5 str =
   Cryptokit.transform_string (Cryptokit.Hexa.encode ()) (Cryptokit.hash_string (Cryptokit.Hash.md5 ()) str)
 ;;
@@ -56,3 +74,20 @@ let begins_with pattern string =
   else
     String.sub string 0 (String.length pattern) = pattern
 ;;
+
+let global_trace_indent = ref 0;;
+let trace ?(skip=false) name (f : 'a -> 'b) (arg : 'a) : 'b = (* FIXME, add timestamps and make runtime optional *)
+  if not skip then
+    let start = Unix.time () in
+      for x=0 to !global_trace_indent do prerr_string "  " done;
+      incr global_trace_indent;
+      prerr_endline ("begin " ^ name);
+      let res = f arg in
+      let finish = Unix.time () in
+      let delta = finish -. start in
+	decr global_trace_indent;
+	for x=0 to !global_trace_indent do prerr_string "  " done;
+	prerr_endline ("end   " ^ name ^ " (" ^ (time_string delta) ^ ")");
+	res
+  else f arg
+;;  

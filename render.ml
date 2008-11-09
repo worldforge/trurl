@@ -77,7 +77,7 @@ let dump_module { tm_module = project; tm_result = tm_result; tm_platforms = pla
 
 (* Project pages *)
 let project_pages (logs : tr_logs) =
-  let module_hash = calc_module_hash logs in
+  let module_hash = calc_module_hash logs.tl_snapshots (* FIXME? *) in
     Hashtbl.iter
 (*    List.iter*)
       (fun tm_module arr (*({ tm_module = tm_module; tm_result = tm_result; tm_platforms = tm_platforms; tm_revision = tm_revision; } as m)*) ->
@@ -181,7 +181,7 @@ let render_snapshot_table (columns, hash) (logs : tr_logs) =
 	    p ("<th>" ^ (href_snapshot ~result:true snapshot) ^ "</th>");
 	    p ("<th>" ^ "<img class=\"next\" src=\"static/images/next.png\" alt=\"next\" />" ^ "</th>");
 	    iter tl
-    in iter (List.drop (List.length logs - columns) (List.rev logs));
+    in iter (List.drop (List.length (logs.tl_snapshots (* FIXME: add tip *)) - columns) (List.rev (logs.tl_snapshots)));
       p "<th></th>";
     p "</tr>";
 
@@ -233,7 +233,7 @@ let render_timeline (columns, hash) (logs : tr_logs) =
 
 let snapshots (logs : tr_logs) =
   let module_hash =
-    (List.length logs, Hashtbl.create 32)
+    (List.length logs.tl_snapshots, Hashtbl.create 32)
   in
   let rec part past future =
     match past with
@@ -248,7 +248,7 @@ let snapshots (logs : tr_logs) =
 	  part tl (hd :: future)
       | [] -> ()
   in
-    part logs [];
+    part logs.tl_snapshots [];
     render_snapshot_table module_hash logs;
     render_timeline module_hash logs;
 ;;

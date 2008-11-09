@@ -353,7 +353,7 @@ let process_logfile ~tm_module file_name t =
   let target_file = Filename.concat "generated" target_file in
   let target_file = (Filename.concat target_dir target_file) in
   let do_gen () =
-    let res = generate_logfile ~tm_module ~t ~target_file file_name in
+    let res = trace ~skip:true ("generate_logfile." ^ tm_module ^ "." ^ t) (generate_logfile ~tm_module ~t ~target_file) file_name in
     let oc = (open_out inter_file) in
     Marshal.to_channel oc res [];
     close_out oc;
@@ -626,11 +626,11 @@ let acc_hosts dir snapshot revisions : tr_snapshot =
     List.fold_left
       (fun snapshot host ->
 	 
-	 acc_builds (dir ^ "/" ^ host ^ "/builds") snapshot revisions host
+	 trace ~skip:true ("parse.host." ^ host) (acc_builds (dir ^ "/" ^ host ^ "/builds") snapshot revisions) host
       ) snapshot hosts
 ;;
 
-let acc_snapshots dir : tr_logs =
+let acc_snapshots dir : tr_snapshot list =
   let acc =
     let n_acc_snapshots = ref 0 in
     let years = rsort (list_dir dir) in
@@ -665,8 +665,8 @@ let acc_snapshots dir : tr_logs =
     (List.concat (List.concat (List.concat (List.concat acc))))
 ;;
 
-let acc_logdata' () : tr_logs =
-  acc_snapshots "logs"
+let acc_logdata' () : tr_snapshot list =
+  trace "parse.snapshot" acc_snapshots "logs"
 ;;
 
 let merge_building_with_snapshot snapshots snapshot_id m building =
@@ -688,8 +688,7 @@ let merge_building_with_snapshot snapshots snapshot_id m building =
   in merge [] snapshots
 ;;
 
-let add_live_data (snapshots : tr_logs) =
-(*prerr_endline "Add live data =>";*)
+let add_live_data (snapshots : tr_snapshot list) =
   let root, snapshot_list =
     List.fold_left
       (fun (acc, lst) () ->
@@ -706,8 +705,9 @@ let add_live_data (snapshots : tr_logs) =
   in
   let root_hosts = root ^ "/hosts" in
     
-    if (Sys.file_exists root_hosts) then
-      let hosts = (list_dir root_hosts) in
+  let hosts = try Some (list_dir root_hosts) with Unix.Unix_error _ -> None in
+    match hosts with
+	Some hosts ->
       let snapshots =
 	List.fold_left
 	  (fun snapshots host ->
@@ -716,7 +716,6 @@ let add_live_data (snapshots : tr_logs) =
 		 let build = (List.hd (rsort (list_dir root_builds))) in
 		 let root_build = root_builds ^ "/" ^ build in
 		 let checkpoints_path = root_build ^ "/checkpoints" in
-(*		   prerr_endline checkpoints_path;*)
 		   if (Sys.file_exists checkpoints_path) then
 		     let lines =
 		       let ch = open_in checkpoints_path in
@@ -725,7 +724,6 @@ let add_live_data (snapshots : tr_logs) =
 			 lst
 		     in
 		     let last = List.last lines in
-(*		       prerr_endline last;*)
 		     let module_ =
 		       try
 			 let res = Pcre.exec ~rex:(Pcre.regexp "^\\d+-\\d+-\\d+T\\d+:\\d+:\\d+(\\+00:00|Z) (begin|end) ([^ ]+)") last in
@@ -736,62 +734,95 @@ let add_live_data (snapshots : tr_logs) =
 			   None -> snapshots
 			 | Some m ->
 			     let platform = load_platform root_build in
-(*			       prerr_endline host;
-			       prerr_endline m;
-			       prerr_endline platform;*)
 			       merge_building_with_snapshot snapshots snapshot_id m { tmb_platform = platform; tmb_host = host; }
 		   else snapshots
 	       else snapshots
 	  ) snapshots hosts;
       in
-	((*prerr_endline "Add live data <=";*) snapshots)
-    else ((*prerr_endline "Add live data (err) <=";*) snapshots)
+	(snapshots)
+      | None ->
+	  (snapshots)
+;;
+
+let merge_tip (tip : tr_module list) (snapshot : tr_snapshot) =
+  List.fold_left
+    (fun tip_modules snap_module ->
+	   let rec merge acc lst =
+	     match lst with
+		 [] ->
+		   ( snap_module :: tip_modules )
+	       | hd :: tl ->
+		   if hd.tm_module = snap_module.tm_module then
+		     let tm_platforms =
+		       let tip_platforms, snap_platforms =
+			 hd.tm_platforms, snap_module.tm_platforms
+		       in
+			 tip_platforms @
+			   (List.filter
+			      (fun s_p ->
+				 not (List.exists (fun t_p -> t_p.tp_platform = s_p.tp_platform) tip_platforms)
+			      ) snap_platforms)
+		     in
+		       { hd with
+			   tm_platforms = tm_platforms;
+			   tm_result = AlertSort.fold_result_platforms tm_platforms;
+		       } :: tl @ acc
+		   else
+		     merge (hd :: acc) tl
+	   in merge [] tip_modules
+    ) tip snapshot.ts_modules
+;;
+
+let calc_tip snapshots =
+  List.fold_left
+    merge_tip
+    [] snapshots
 ;;
 
 let main () =
 
-  let snapshots = acc_logdata' () in
   let snapshots =
-    try
-      add_live_data snapshots
-    with _ -> (* FIXME, print exception *)
-      prerr_endline "Error adding live data.";
-      snapshots
+    trace "parse" (fun () ->
+		     let snapshots = acc_logdata' () in
+		     let snapshots =
+		       try
+			 trace "parse.live" add_live_data snapshots
+		       with _ -> (* FIXME, print exception *)
+			 prerr_endline "Error adding live data.";
+			 snapshots
+		     in
+		       snapshots) ()
+  in
+
+  let logs, module_hash =
+    trace "calc" (fun () ->
+		    let logs =
+		      { tl_snapshots = snapshots;
+			tl_tip = trace "calc.tip" calc_tip snapshots; }
+		    in
+		    let module_hash = trace "calc.module_hash" RenderCommon.calc_module_hash (logs.tl_snapshots) in
+		      logs, module_hash) ()
   in
     (* FIXME Calc scheduled module/platform/host combinationa *)
     (* Sort: platforms, snapshots, modules, ... FIXME *)
     (* FIXME Generate tip, hash and array *)
 
-  Render.project_pages snapshots;
-
-  Render.snapshots snapshots;
-
-  let module_hash = RenderCommon.calc_module_hash snapshots in
-  let current_modules =
-    let lst = ref [] in
-      Hashtbl.iter
-	(fun k arr ->
-	   let rec rev_seek i =
-	     if i > 0 then
-	       match arr.(i) with
-		   None -> rev_seek (i-1)
-		 | Some m ->
-		     lst := m :: (!lst)
-	     else prerr_endline ("module without build results: " ^ k)
-	   in
-	     rev_seek (Array.length arr - 1)
-	) module_hash;
-      !lst
-  in
-    Render.frontpage snapshots module_hash current_modules;
-    List.iter RenderCommon.snapshot_module_platform_href_do_render (!RenderCommon.snapshot_module_platform_to_render);
-
-  let old_results = Results.load () in
-  let new_results, changeset =
-    Results.merge old_results current_modules (*snapshots*)
-  in
-    Results.save new_results;
-    Results.hooks changeset current_modules (*snapshots*);
+    trace "render" (fun () ->
+		      trace "render.project_pages" Render.project_pages logs;
+		      
+		      trace "render.snapshots" Render.snapshots logs;
+		      
+		      let current_modules = logs.tl_tip in
+			trace "render.frontpage" (Render.frontpage logs module_hash) current_modules;
+			trace "render.snapshot_module_platform" (List.iter RenderCommon.snapshot_module_platform_href_do_render) (!RenderCommon.snapshot_module_platform_to_render);
+			
+			let old_results = Results.load () in
+			let new_results, changeset =
+			  Results.merge old_results current_modules (*logs*)
+			in
+			  Results.save new_results;
+			  Results.hooks changeset current_modules (*logs*);
+		   ) ()
 ;;
 
-main ()
+trace "main" main ()

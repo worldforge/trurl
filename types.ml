@@ -51,22 +51,11 @@ type vcs_cvs = { vc_repository : string; vc_path : string; vc_branch : string; v
 type vcs_subversion = { vs_repository : string; vs_path : string; vs_revision : int }
 type vcs_git = { vg_repository : string; vg_branch : string; vg_commit : string }
 type vcs = CVS of vcs_cvs | Subversion of vcs_subversion | Git of vcs_git
-(*type vcs_repository = CVS of (string * string) (* second is path inside repository *) | Subversion of (string * string) | Git of string
-type vcs_revision = CVS' of Unix.tm (* Won't even try to track cvs revisions *) | Subversion' of int | Git' of string (* git commit object *)*)
-(*type tr_revision = {
-(*  tr_module : tr_module;*)
-(*  tb_result : result;
-  tb_repository : string;
-  tb_vcs : vcs * int
-  tb_id : (int * int * int * int); (* year, month, day, build *)*)
-}*)
 type tr_module_building = {
-  (*  tmb_module : string;*)
   tmb_platform : string;
   tmb_host : string;
 }
 type tr_module_scheduled = {
-(*  tms_module : string;*)
   tms_platform : string;
   tms_host : string;
 }
@@ -83,17 +72,20 @@ type tr_snapshot = {
   ts_snapshot : snapshot;
   ts_result : result;
   ts_modules : tr_module list;
-(*  ts_building : tr_snapshot_building list;
-  ts_scheduled : tr_snapshot_scheduled list;*)
 }
-type tr_logs = tr_snapshot list
+type tr_logs = {
+  tl_snapshots : tr_snapshot list;
+  tl_tip : tr_module list;
+}
 
 let safe_string_of_result r =
   match r with
-    (*Perfect -> "perfect"*)
   | Error -> "error"
   | Dependency_error -> "dependency_error"
   | Warning -> "warning"
   | Information -> "information"
   | Unknown -> "unknown"
 
+let snapshot_safe_string (year, month, day, build) =
+  Printf.sprintf "%04i.%02i.%02i-%03i" year month day build
+;;
