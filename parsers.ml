@@ -55,19 +55,27 @@ let render_out ~errors ~matched_lines ~total_lines ~warnings ~dep_err =
     Printf.sprintf "E%i, W%i%s%s" !errors !warnings (if !dep_err > 0 then Printf.sprintf ", D%i" !dep_err else "") (if !matched_lines <> !total_lines then Printf.sprintf ", ?%i" (!total_lines - !matched_lines) else "")
   else "All ok."
     
-let __parse lst ~(cb : callbacks) line =
-  let n_tested = ref 0 in
-  let (rex, res) =
-    (List.find
-         (fun (rex, _) ->
-	    incr n_tested;
-            try
-              ignore (Pcre.exec ~rex:(Pcre.regexp ~flags:[`CASELESS(*;`UTF8*)] rex) line); true
-            with Not_found ->
-              false
-              | Pcre.BadPattern _ as e ->
-                  prerr_string "Bad pattern: ";
-                  error_endline rex;
-                  raise e
-         ) (lst @ ["(?<!-W)error", Error; "warn", Warning;]))
-  in res, (!n_tested, rex)
+let __parse lst =
+  let lst =
+    List.map
+      (fun (rex, res) ->
+	 ((Pcre.regexp ~flags:[`CASELESS(*;`UTF8*)] rex), res, rex)
+      ) (lst @ ["(?<!-W)error", Error; "warn", Warning;])
+  in
+    (fun ~(cb : callbacks) line ->
+       let n_tested = ref 0 in
+       let (rex, res, rex') =
+	 (List.find
+            (fun (rex, _, rex') ->
+	       incr n_tested;
+               try
+		 ignore (Pcre.exec ~rex line); true
+               with Not_found ->
+		 false
+		 | Pcre.BadPattern _ as e ->
+                     prerr_string "Bad pattern: ";
+                     error_endline rex';
+                     raise e
+            ) (lst))
+       in res, (!n_tested, rex')
+    )
