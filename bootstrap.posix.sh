@@ -60,7 +60,8 @@ function ready {
     (echo -n 'uname -m: ' >> platform; uname -m >> platform 2>&1 || error "$HOST" '' '' 'bootstrap.platform' 'uname -m' platform) &&
     (echo -n 'uname -o: ' >> platform; uname -o >> platform 2>&1 || error "$HOST" '' '' 'bootstrap.platform' 'uname -o' platform) &&
     (which dpkg > /dev/null 2>&1 && ((dpkg -l > system.dpkg 2>&1 && (test -f system.tar && tar rf system.tar system.dpkg || tar cf system.tar system.dpkg)) || error "$HOST" '' '' 'bootstrap.system' 'dpkg -l' system.dpkg); true) &&
-    (which yum > /dev/null 2>&1 && ((yum list installed > system.yum 2>&1 && (test -f system.tar && tar rf system.tar system.yum || tar cf system.tar system.yum)) || error "$HOST" '' '' 'bootstrap.system' 'yum list installed' system.yum); true) &&
+    # try to avoid errors when yum is installed to facilitate chroots
+    ((if which dpkg > /dev/null 2>&1; then false; else true; fi) && which yum > /dev/null 2>&1 && ((yum list installed > system.yum 2>&1 && (test -f system.tar && tar rf system.tar system.yum || tar cf system.tar system.yum)) || error "$HOST" '' '' 'bootstrap.system' 'yum list installed' system.yum); true) &&
     (ready "$HOST" platform || error "$HOST" '' '' 'bootstrap.ready.download' '' platform) &&
     (LC_ALL=C bash ready.sh || error "$HOST" '' '' 'bootstrap.ready.run' '' ready.sh)
 )
