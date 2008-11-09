@@ -47,6 +47,7 @@
     <rule result="Dependency_error" regexp="You do not have DevIL installed" />
     <rule result="Dependency_error" regexp="^Cannot find python headers for Python \d+.\d+ or later\.$" />
     <rule result="Dependency_error" regexp="Cannot find PostgreSQL config or config failed" />
+    <rule result="Dependency_error" regexp="Requested '\w+ >= \d+(\.\d+)?(\.\d+)?' but version of \w+ is \d+(\.\d+)?(\.\d+)?" />
   </logtype>
   <logtype extension="make_all" name="make all" prepend_rules="common" >
     <rule regexp="^make(\[\d+\])?: \*\*\* \[.*\] Error \d+" result="Error" />
@@ -170,6 +171,9 @@ got loginError while not logging in
 got Error error op from server with bad message
 got loginError while not logging in
 got Error error op from server without args
+    </rule>
+    <rule result="Information">
+failure getting an avatar: bad type for char creation
     </rule>
     <rule regexp="^fail" result="Error" comment="Usually some additional service is needed for this to work." />
     <rule regexp="^FAIL: " result="Error" comment="Usually some additional service is needed for this to work." />
