@@ -298,15 +298,17 @@ let render_mistakes platforms_mistakes =
 		let error_messages = (List.filter (fun { s_result = s_result; } -> s_result = platform_result) f_sections) in
 		  (mklink ("generated/" ^ log_filename) step) ^ ":" ^
 		    if List.length error_messages > 0 then
-		      "<br />\n"
-		      ^ List.fold_left
+		      "<br />\n" ^
+			"<tt>" ^
+			List.fold_left
 			(fun str { s_lines = s_lines; } -> str ^
 			   (List.fold_left
 			      (fun str' (line_no, line_data, line_result, _) -> str' ^
-				 (Printf.sprintf (*"<dl>\n<dt>%i</dt><dd><tt>%s</tt></dd>\n</dl>\n"*) "<tt>%i: %s</tt><br/>\n" line_no (escape_html line_data))
+				 (Printf.sprintf (*"<dl>\n<dt>%i</dt><dd><tt>%s</tt></dd>\n</dl>\n"*) "%i: %s<br/>\n" line_no (escape_html line_data))
 			      ) "" s_lines)
-			) "" (up_to 10 error_messages)
-		      ^ (if List.length error_messages > 10 then
+			) "" (up_to 10 error_messages) ^
+			"</tt>" ^
+			(if List.length error_messages > 10 then
 			   Printf.sprintf "<tt>Log contains %i more messages.</tt><br/>\n" (List.length error_messages - 10)
 			 else "")
 		    else (* Meta told us something bad happened. *)
