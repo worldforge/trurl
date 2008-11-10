@@ -23,9 +23,6 @@
 require_once('shared.php');
 
 function trurl_last($last) {
-  if ($last == false) {
-    echo "Build starting.";
-  } else {
   $delta = (time() - $last);
   $days = $delta / (24 * 60 * 60);
   if (floor($days)) {
@@ -40,7 +37,6 @@ function trurl_last($last) {
     }
   }
   echo " since last build.";
-  }
 }
 
 function trurl_finished_buttons() {
@@ -126,7 +122,7 @@ function trurl_global_state() {
     }
   }
 
-  if ($hosts_finished < $hosts_seen) {
+  if ($hosts_finished < $hosts_seen || ($hosts_seen < $trurl_hosts_seen && $last == false)) {
     $state = 'build';
   }
 
