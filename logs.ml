@@ -700,6 +700,7 @@ let merge_building_with_snapshot snapshots snapshot_id m building =
   in merge [] snapshots
 ;;
 
+let live_is_building_rex = (Pcre.regexp "^\\d+-\\d+-\\d+T\\d+:\\d+:\\d+(\\+00:00|Z) (begin|end) ([^ ]+)");;
 let add_live_data (snapshots : tr_snapshot list) =
   let root, snapshot_list =
     List.fold_left
@@ -708,6 +709,7 @@ let add_live_data (snapshots : tr_snapshot list) =
 	   (acc ^ "/" ^ entry, entry :: lst)
       ) ("/home/trurl/work/logs", []) [(); (); (); ()] (* year, month, day, snap *)
   in (* FIXME look back three steps *)
+    (fun root snapshot_list ->
   let snapshot_id =
     match snapshot_list with
 	[snap; day; month; year] ->
@@ -735,10 +737,15 @@ let add_live_data (snapshots : tr_snapshot list) =
 			 close_in ch;
 			 lst
 		     in
+		       (*
+			 ^date begin module$ -> building
+			 ^date end module$ -> finished
+			 remainder -> scheduled
+		       *)
 		     let last = List.last lines in
 		     let module_ =
 		       try
-			 let res = Pcre.exec ~rex:(Pcre.regexp "^\\d+-\\d+-\\d+T\\d+:\\d+:\\d+(\\+00:00|Z) (begin|end) ([^ ]+)") last in
+			 let res = Pcre.exec ~rex:live_is_building_rex last in
 			   Some (Pcre.get_substring res 3)
 		       with Not_found -> None
 		     in
@@ -754,6 +761,7 @@ let add_live_data (snapshots : tr_snapshot list) =
 	(snapshots)
       | None ->
 	  (snapshots)
+    ) root snapshot_list
 ;;
 
 let merge_tip (tip : tr_module list) (snapshot : tr_snapshot) =
