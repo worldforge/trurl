@@ -170,7 +170,7 @@ let hooks changeset latest_modules =
            | _ -> ()
       ) changeset;
 
-    if List.length changeset > 0 then begin
+    begin
       let rec acc errors deperrors warnings logs =
         match logs with
             [] -> errors, deperrors, warnings
