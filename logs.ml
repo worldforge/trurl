@@ -450,6 +450,9 @@ let vcs_same_branch vcs vcs' =
     | _ -> failwith "vcs_same_branch with different vcs called"
 ;;
 
+let global_ignore_platforms = ["debian-unstable";];;
+let global_skip_hosts = ["firefly-virtualbox-ubuntu-lts"];;
+
 let snapshot_merge_raw ({ ts_modules = ts_modules; ts_snapshot = ts_snapshot; } as snapshot : tr_snapshot) (module_name, revision, platform, build, host, checkpoint, logs) : tr_snapshot =
   if (match checkpoint with Some (Some _, Some _) -> false | _ -> true) then (* Skip incomplete builds *)
     snapshot
@@ -497,7 +500,7 @@ let snapshot_merge_raw ({ ts_modules = ts_modules; ts_snapshot = ts_snapshot; } 
       { tb_build = build; tb_host = host; tb_start = start; tb_time = time; tb_result = fold_result' (fun { f_result = f_result; } -> f_result) logs; tb_logs = logs; }
   in
   let current_platform = { current_platform with tp_builds = List.rev (List.sort ~cmp:(fun a b -> compare a.tb_build b.tb_build) (new_build :: current_platform.tp_builds)); } in
-  let current_platform = { current_platform with tp_result = (List.hd current_platform.tp_builds).tb_result (*fold_result' (fun { tb_result = tb_result; } -> tb_result) current_platform.tp_builds*); } in (* FIXME, this should actually be the fold of the tips of the varying hosts, or possibly just the latest build *)
+  let current_platform = { current_platform with tp_result = if List.mem current_platform.tp_platform global_ignore_platforms then Unknown else (List.hd current_platform.tp_builds).tb_result (*fold_result' (fun { tb_result = tb_result; } -> tb_result) current_platform.tp_builds*); } in (* FIXME, this should actually be the fold of the tips of the varying hosts, or possibly just the latest build *)
   let current_module = { current_module with tm_platforms = (List.sort ~cmp:(fun a b -> compare a.tp_platform b.tp_platform) (current_platform :: other_platforms)); } in
   let current_module = { current_module with tm_result = fold_result' (fun { tp_result = tp_result; } -> tp_result) current_module.tm_platforms; } in
   let snapshot = { snapshot with ts_modules = current_module :: other_modules; } in
@@ -630,8 +633,10 @@ let acc_hosts dir snapshot revisions : tr_snapshot =
   let hosts = rsort (list_dir dir) in
     List.fold_left
       (fun snapshot host ->
-	 
-	 trace ~skip:true ("parse.host." ^ host) (acc_builds (dir ^ "/" ^ host ^ "/builds") snapshot revisions) host
+	 if List.mem host global_skip_hosts then
+	   snapshot
+	 else
+	   trace ~skip:true ("parse.host." ^ host) (acc_builds (dir ^ "/" ^ host ^ "/builds") snapshot revisions) host
       ) snapshot hosts
 ;;
 
