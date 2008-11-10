@@ -130,7 +130,7 @@ function trurl_global_state() {
   switch ($state) {
     case 'build':
       echo "<img src=\"static/images/building.png\" alt=\"\" /> Building</p>\n";
-      echo "<p class=\"global eta\">"; echo ($hosts_seen - $hosts_finished) . "/$trurl_hosts_seen hosts building.</p>\n";
+      echo "<p class=\"global eta\">"; echo ($hosts_seen - $hosts_finished) . "/$hosts_finished/$trurl_hosts_seen hosts building/finished/total.</p>\n";
       // XXX abort build (combine with force command?)
       /*      echo "<p class=\"global buttons\">";
   echo "<form action=\"action.php\" method=\"post\">";
