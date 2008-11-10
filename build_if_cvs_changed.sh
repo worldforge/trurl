@@ -1,5 +1,6 @@
 #! /bin/bash
 export PATH="/usr/lib/ccache:$PATH"
+test -d /home/trurl/work/lock || mkdir -p /home/trurl/work/lock
 (
     # wait 55 minutes for the lock (change if run more often than every hour)
     flock -x -w 3300 200 && (
@@ -77,4 +78,4 @@ export PATH="/usr/lib/ccache:$PATH"
 	(./update_logs.sh &)
 #	./trurl_render_log ../public_html/
     )
-) 200>/home/trurl/work/build.lock
+) 200>/home/trurl/work/lock/build.lock
