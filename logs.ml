@@ -841,13 +841,17 @@ let main () =
 			trace "render.frontpage" (Render.frontpage logs module_hash) current_modules;
 			trace "render.snapshot_module_platform" (List.iter RenderCommon.snapshot_module_platform_href_do_render) (!RenderCommon.snapshot_module_platform_to_render);
 			
-			let old_results = Results.load () in
-			let new_results, changeset =
-			  Results.merge old_results current_modules (*logs*)
-			in
-			  Results.save new_results;
-			  Results.hooks changeset current_modules (*logs*);
-		   ) ()
+		   ) ();
+
+      trace "results" (fun () ->
+			 let old_results = Results.load () in
+			 let new_results, changeset =
+			   Results.merge old_results logs.tl_tip (*logs*)
+			 in
+			   Results.save new_results;
+			   Results.hooks changeset logs.tl_tip (*logs*);
+		      ) ();
+
 ;;
 
 trace "main" main ()
