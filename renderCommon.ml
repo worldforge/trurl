@@ -622,9 +622,9 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
 			 let img, text = icon_and_text ~small:true result in
 			   p (Printf.sprintf "<li class=\"%s\">%s:%s</li>" (safe_string_of_result result) img (* text takes too much space here *) (fold_platforms lst));
 		     in
-		     let perhaps_building lst =
+		     let perhaps' (action, action_safe) lst =
 		       if List.length lst > 0 then
-			 p (Printf.sprintf "<li class=\"building\"><img src=\"static/images/building-16x16.png\" alt=\"Building\" />:%s</li>" (fold_platforms' lst));
+			 p (Printf.sprintf "<li class=\"%s\"><img src=\"static/images/%s-16x16.png\" alt=\"%s\" />:%s</li>" action_safe action_safe action (fold_platforms' lst));
 		     in
 		       p "<ul>";
 		       if show_snapshot_id then
@@ -634,7 +634,8 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
 		       perhaps w;
 		       perhaps s;
 		       perhaps u;
-		       perhaps_building (List.map (fun { tmb_platform = platform } -> platform) mcurr.tm_building);
+		       perhaps' ("Building", "building") (List.map (fun { tmb_platform = platform } -> platform) mcurr.tm_building);
+		       perhaps' ("Scheduled", "scheduled") (List.map (fun { tms_platform = platform } -> platform) mcurr.tm_scheduled);
 		       p "</ul>";
 		       p "</td>";
 		   end;
