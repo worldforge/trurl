@@ -612,13 +612,13 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
 		       List.fold_left
 			 (fun str p ->
 			    str ^ " " ^ (render_platform p)
-			 ) "" lst
+			 ) "" (List.sort lst)
 		     in
 		     let fold_platforms' lst =
 		       List.fold_left
 			 (fun str p ->
 			    str ^ " " ^ (render_platform' p)
-			 ) "" lst
+			 ) "" (List.sort lst)
 		     in
 		     let perhaps lst =
 		       if List.length lst > 0 then
