@@ -293,7 +293,11 @@ let render_mistakes platforms_mistakes =
 	    ^ (render_platform platform') ^ (List.fold_left (fun acc platform -> acc ^ " " ^ (render_platform platform)) "" equal) (* FIXME, would be nice to able able to access the other logs as well *) ^ "\n" ^
 	      begin (* TODO: How do we give extensible knowledge of build-step sorting? *)
 		let { f_step = step; f_result = step_result; f_filename = log_filename; f_sections = f_sections; } =
-		  List.find (fun { f_result = step_result; } -> platform_result = step_result) (sort_steps platform_logs)
+		  try
+		    List.find (fun { f_result = step_result; } -> platform_result = step_result) (sort_steps platform_logs)
+		  with Not_found -> (* FIXME, only happens when we're hiding actual state *)
+		    let platform_result = (List.hd tp_builds).tb_result in
+		      List.find (fun { f_result = step_result; } -> platform_result = step_result) (sort_steps platform_logs)
 		in
 		let error_messages = (List.filter (fun { s_result = s_result; } -> s_result = platform_result) f_sections) in
 		  (mklink ("generated/" ^ log_filename) step) ^ ":" ^
