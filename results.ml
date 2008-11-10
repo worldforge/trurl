@@ -156,7 +156,6 @@ let now () =
 
 let hooks changeset latest_modules =
   (* when updating topic first check if the generated one is identical to the existing one *)
-  (* We *need* a way to skip in-progress builds. FIXME *)
   let log = open_out_gen [Open_wronly;Open_append;Open_creat] 0o644 "trurl.states.log" in
     List.iter
       (fun ((module_, platform), (past, present)) ->
