@@ -498,7 +498,7 @@ let icon_and_text ?(small=false) result =
       | Dependency_error -> "deperror", "Error (dependency)"
       | Warning -> "warning", "Warning"
       | Information -> "ok", "Success"
-      | Unknown -> "error", "Internal error"
+      | Unknown -> "unknown", "Internal error"
   in
     ("<img src=\"static/images/" ^ img ^ (if small then "-16x16" else "") ^ ".png\" alt=\"" ^ text ^ "\" />", text)
 ;;
