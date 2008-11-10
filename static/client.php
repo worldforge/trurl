@@ -158,7 +158,7 @@ function checkpoint() {
     header("Connection: close");
     header("Content-Length: 0");
     flush();*/
-    if ($_POST['edge'] == 'end' && !isset($_POST['step'])) {
+    if (!isset($_POST['step'])) { // begin -> new module started -> gears $_POST['edge'] == 'end' && 
       touch("/home/trurl/work/force/render");
       /*system("/home/trurl/work/fork_update_logs.sh");*/
     }
