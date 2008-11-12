@@ -394,41 +394,46 @@ let rlist_dir dir =
 ;;
 let hd = List.hd;;
 
+let global_parse_revision_k_v_regexp = (Pcre.regexp "^([^ ]+) (.*)$");;
+let global_parse_revision_empty_regexp = (Pcre.regexp "^$");;
 let parse_revisions file =
-(*  let channel = open_in file in*)
-  let scanbuf = Scanf.Scanning.from_file file in
-  let revisions = Hashtbl.create 32 in
-  let acc = Hashtbl.create 16 in
-    begin try
-      while true do
-	(try
-	   Scanf.bscanf scanbuf "\n" (fun () -> () (*print_endline "new section"*)) ();
-	   let f = Hashtbl.find acc in
-	   let name = Hashtbl.find acc "name" in
-	   let vcs =
-	     match Hashtbl.find acc "vcs" with
-		 "cvs" ->
-		   CVS { vc_repository = f "cvs.repository"; vc_path = f "cvs.path"; vc_branch = f "cvs.branch"; vc_time = Scanf.sscanf (f "cvs.time") "%i-%i-%i %i:%i:%i" (fun year month day hour minute second -> { Unix.tm_year = year - 1900; tm_mon = month - 1; tm_mday = day; tm_hour = hour; tm_min = minute; tm_sec = second; (* following is ignored: *) tm_wday = 0; tm_yday = 0; tm_isdst = false; }); }
-	       | "git" ->
-		   Git { vg_repository = f "git.repository"; vg_branch = f "git.branch"; vg_commit = f "git.commit"; }
-	       | vcs -> failwith ("unknown vcs: " ^ vcs)
-	   in
-	     Hashtbl.add revisions name vcs;
-	     Hashtbl.clear acc;
-	 with
-	     Scanf.Scan_failure _ ->
-	       Scanf.bscanf scanbuf "%[^ ] %[^\n]\n" (fun k v -> (*Printf.printf "k: '%s' v: '%s'\n" k v;*) Hashtbl.add acc k v));
-      done
-    with End_of_file ->
+  let ch = open_in file in
+  let lines = input_list ch in
+    close_in ch;
+    let revisions = Hashtbl.create 32 in
+    let acc = Hashtbl.create 16 in
+      List.iter
+	(fun line ->
+	   try
+	     ignore (Pcre.exec ~rex:global_parse_revision_empty_regexp line);
+	     let f = Hashtbl.find acc in
+	     let name = Hashtbl.find acc "name" in
+	     let vcs =
+	       match Hashtbl.find acc "vcs" with
+		   "cvs" ->
+		     CVS { vc_repository = f "cvs.repository"; vc_path = f "cvs.path"; vc_branch = f "cvs.branch"; vc_time = Scanf.sscanf (f "cvs.time") "%i-%i-%i %i:%i:%i" (fun year month day hour minute second -> { Unix.tm_year = year - 1900; tm_mon = month - 1; tm_mday = day; tm_hour = hour; tm_min = minute; tm_sec = second; (* following is ignored: *) tm_wday = 0; tm_yday = 0; tm_isdst = false; }); }
+		 | "git" ->
+		     Git { vg_repository = f "git.repository"; vg_branch = f "git.branch"; vg_commit = f "git.commit"; }
+		 | vcs -> failwith ("unknown vcs: " ^ vcs)
+	     in
+	       Hashtbl.add revisions name vcs;
+	       Hashtbl.clear acc;
+	   with
+	       Not_found ->
+		 try
+		   let res = Pcre.exec ~rex:global_parse_revision_k_v_regexp line in
+		   let k, v = (Pcre.get_substring res 1), (Pcre.get_substring res 2) in
+		     Hashtbl.add acc k v;
+		 with Not_found ->
+		   failwith "error parsing revisions"
+	) lines;
       if Hashtbl.length acc <> 0 then failwith "unclaimed section FIXME";
-    end;
-    revisions
-(*    close_in channel;*)
-    
+      revisions
 ;;
 
+let global_parse_log_regexp = (Pcre.regexp "\\.log\\.([^.]+)$");;
 let parse_log ~tm_module filename =
-  let res = (Pcre.exec ~rex:(Pcre.regexp "\\.log\\.([^.]+)$") filename) in
+  let res = (Pcre.exec ~rex:global_parse_log_regexp filename) in
   let step = (Pcre.get_substring res 1) in
     process_logfile ~tm_module filename step
 ;;
