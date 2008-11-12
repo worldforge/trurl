@@ -50,7 +50,7 @@
     <rule result="Dependency_error" regexp="Requested '\w+ (>=|<=|>|<) \d+(\.\d+)?(\.\d+)?' but version of \w+ is \d+(\.\d+)?(\.\d+)?" />
   </logtype>
   <logtype extension="make_all" name="make all" prepend_rules="common" >
-    <rule result="Unknown" regexp="^variable.cpp:255: warning: ignoring return value of 'double strtod\(const char\*, char\*\*\)', declared with attribute warn_unused_result$" comment="supressing varconf side-effect warning" />
+    <rule result="Information" regexp="^variable.cpp:255: warning: ignoring return value of 'double strtod\(const char\*, char\*\*\)', declared with attribute warn_unused_result$" comment="supressing varconf side-effect warning" />
     <rule regexp="^make(\[\d+\])?: \*\*\* \[.*\] Error \d+" result="Error" />
     <rule regexp="^make(\[\d+\])?: \*\*\* No rule to make target `.*'\.\s+Stop.$" result="Error" />
     <rule regexp="^[^:]+:(\d+:)* ((syntax|parse) error|error:|#error|`[^']+' undeclared) " result="Error" />
