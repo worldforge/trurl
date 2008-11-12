@@ -451,6 +451,7 @@ let vcs_same_branch vcs vcs' =
 ;;
 
 let global_ignore_platforms = ["debian-unstable";];;
+let global_skip_platforms = ["fedora-9.93";];;
 let global_skip_hosts = ["firefly-virtualbox-ubuntu-lts"];;
 
 let snapshot_merge_raw ({ ts_modules = ts_modules; ts_snapshot = ts_snapshot; } as snapshot : tr_snapshot) (module_name, revision, platform, build, host, checkpoint, logs) : tr_snapshot =
@@ -621,7 +622,7 @@ let acc_builds dir snapshot revisions host : tr_snapshot =
 	   else None
 	 in
 	 let platform = load_platform base in
-	   if n > 3 then (* FIXME, use lazy and possibly build list info and only reparse those that are missing *)
+	   if n > 3 || List.mem platform global_skip_platforms then (* FIXME, use lazy and possibly build list info and only reparse those that are missing *)
 	     (n, snapshot)
 	   else
 	     (n + 1, trace ~skip:true ("parse.build." ^ build) (acc_modules checkpoints modules_dir snapshot revisions platform host) (int_of_string build))
