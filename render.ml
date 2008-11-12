@@ -29,7 +29,7 @@ let dump_module { tm_module = project; tm_result = tm_result; tm_platforms = pla
   let dl' () = Printf.fprintf ch "</dl>" in
     Printf.fprintf ch "<div class=\"%s\">" (safe_string_of_result tm_result);
     Printf.fprintf ch "<h1>%s</h1>" project;
-    Printf.fprintf ch "<table>%s</table>" (module_history_to_table_row ~limit:5 ~merge:true ~always_arrows:true ~show_snapshot_id:true history);
+    trace ~skip:true ("dump_module." ^ project ^ ".module_history_to_table_row") (fun () -> Printf.fprintf ch "<table>%s</table>" (module_history_to_table_row ~limit:5 ~merge:true ~always_arrows:true ~show_snapshot_id:true history)) ();
     dl tm_result;
     Printf.fprintf ch "<dt>%s</dt>" "Revision";
     Printf.fprintf ch "<dd>%s</dd>"
@@ -89,7 +89,7 @@ let project_pages (logs : tr_logs) =
 	 let ch = open_out (Filename.concat target_dir (project_url tm_module)) in
 	   html_head ~file:(project_url tm_module) ~title:tm_module ch;
 	   Printf.fprintf ch "<div class=\"other\">";
-	   dump_module m (arr) ch;
+	   trace ~skip:false ("render.project_pages.dump_module." ^ m.tm_module) (fun () -> dump_module m (arr) ch) ();
 	   Printf.fprintf ch "</div>";
 	   html_foot ch;
 	   close_out ch;
