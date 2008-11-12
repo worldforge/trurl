@@ -75,9 +75,16 @@ let begins_with pattern string =
     String.sub string 0 (String.length pattern) = pattern
 ;;
 
+let global_verbose =
+  try
+    Sys.argv.(2) = "--verbose" || Sys.argv.(3) = "--verbose"
+  with
+    Invalid_argument "Array.get"
+  | Invalid_argument "index out of bounds" -> false
+;;
 let global_trace_indent = ref 0;;
 let trace ?(skip=false) name (f : 'a -> 'b) (arg : 'a) : 'b = (* FIXME, add timestamps and make runtime optional *)
-  if not skip then
+  if global_verbose && not skip then
     let start = Unix.gettimeofday () in
       for x=0 to !global_trace_indent do prerr_string "  " done;
       incr global_trace_indent;
