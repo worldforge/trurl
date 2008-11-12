@@ -73,9 +73,10 @@ type tr_snapshot = {
   ts_result : result;
   ts_modules : tr_module list;
 }
+type tr_tip = tr_module list
 type tr_logs = {
   tl_snapshots : tr_snapshot list;
-  tl_tip : tr_module list;
+  tl_tip : tr_tip;
 }
 
 let safe_string_of_result r =

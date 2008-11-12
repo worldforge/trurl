@@ -22,7 +22,7 @@ open Config;;
 open RenderCommon;;
 open ExtLib;;
 
-let render_embarassment ({ tm_module = project; tm_result = result; tm_revision = tm_revision; tm_platforms = platforms }
+let render_embarassment ~tip ({ tm_module = project; tm_result = result; tm_revision = tm_revision; tm_platforms = platforms }
                         : tr_module) history =
   let platforms_perfect, platforms_other =
       List.partition
@@ -41,7 +41,7 @@ let render_embarassment ({ tm_module = project; tm_result = result; tm_revision 
     "<li id=\"" ^ (xml_escape_attribute project) ^ "\" class=\"" ^ (safe_string_of_result result) ^ "\">" ^
       (href_of_project project) ^
 
-      (Printf.sprintf "<table>%s</table>" (module_history_to_table_row ~merge:true ~always_arrows:true ~show_snapshot_id:true ~limit:3 history)) ^
+      (Printf.sprintf "<table>%s</table>" (module_history_to_table_row ~tip ~merge:true ~always_arrows:true ~show_snapshot_id:true ~limit:3 history)) ^
 
       (if List.length platforms_mistakes > 0 (* Only needed to validate during testing *) then
 	 begin
@@ -51,7 +51,7 @@ let render_embarassment ({ tm_module = project; tm_result = result; tm_revision 
       "</li>"
 ;;
 
-let render ch (other : tr_module list) history_hash =
+let render ch ~tip (other : tr_module list) history_hash =
   (
     let (id, title, list, f) = (
       
@@ -79,7 +79,7 @@ let render ch (other : tr_module list) history_hash =
 		 Printf.fprintf ch "</ul>\n";
 		 Printf.fprintf ch "<ul class=\"%s\">\n" (safe_string_of_result this_item_result);
 	       end;
-	       Printf.fprintf ch "%s\n" (f item (Hashtbl.find history_hash tm_module));
+	       Printf.fprintf ch "%s\n" (f ~tip:(List.find (fun { tm_module = tm_module' } -> tm_module = tm_module') tip) item (Hashtbl.find history_hash tm_module));
 	    ) list;
 	  Printf.fprintf ch "</ul>\n";
 	  Printf.fprintf ch "</div>\n";

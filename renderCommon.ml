@@ -531,68 +531,7 @@ let module_history_merge arr =
     Array.of_list (List.rev_map (fun x -> Some x) !merged)
 ;;
 
-let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_snapshot_id=false) ?title ?limit ?padding arr =
-  let buffer = Buffer.create 1024 in
-  let p s = Buffer.add_string buffer s in
-  let titles, module_name =
-    match title with
-	None -> false, ""
-      | Some title -> true, title
-  in
-  let arr = if merge then module_history_merge arr else arr in
-  let arr =
-    match limit with
-	None -> arr
-      | Some max ->
-	  let len = Array.length arr in
-	    if len > max then
-	      Array.sub arr (len - max) max
-	    else arr
-  in
-  let arr =
-    match padding, limit with
-	_, None
-      | None, _ -> arr
-      | Some side, Some max ->
-	  let len = Array.length arr in
-	    if len < max then
-	      let arr' = Array.make max None in
-		Array.blit arr 0 arr' (match side with `left -> (max - len) | `right -> 0) len;
-		arr'
-	    else arr
-  in
-  let columns = Array.length arr in
-    p "<tr>";
-    if titles then
-      p ("<th>" ^ (href_module module_name) ^ "</th>");
-    Array.iteri
-      (fun i mopt ->
-	 match mopt with
-	     None ->
-	       (*if not merge then*)
-		 (p "<td class=\"unknown empty\"></td>";
-		  (if (i+1) < columns then p "<td class=\"next\"></td>"));
-	   | Some mcurr ->
-	       let equal =
-		 (if (i+1) < columns then
-		    match arr.(i+1) with
-			None -> false (*merge*) (*false*) (* If we merge, we already have the edge *)
-		      | Some mnext ->
-			  if (href_diff ~current:mnext ~previous:mcurr) (* FIXME *) = "" && (equal_modules mcurr mnext) then true else false
-		  else false (*merge*) (*false*) (* same as above re: edge *)) &&
-		   (if i > 0 then
-		      match arr.(i-1) with
-			  None -> true (* above we want to ensure we render the last one *)
-			| Some mprev ->
-			    if (href_diff ~current:mcurr ~previous:mprev) (* FIXME *) = "" && (equal_modules mprev mcurr) then true else false
-		    else true)
-	       in
-		 if equal then
-(*		   if merge then
-		     ()
-		   else*)
-		     p ("<td class=\"" ^ (safe_string_of_result mcurr.tm_result) ^ " empty\"></td>")
-		 else
+let render_module_td ~p ?(snapshot_id=None) mcurr =
 		   begin
 		     p ("<td class=\"" ^ (safe_string_of_result mcurr.tm_result) ^ "\">");
 		     let e, d, w, s, u =
@@ -631,8 +570,11 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
 			 p (Printf.sprintf "<li class=\"%s\"><img src=\"static/images/%s-16x16.png\" alt=\"%s\" />:%s</li>" action_safe action_safe action (fold_platforms' lst));
 		     in
 		       p "<ul>";
-		       if show_snapshot_id then
-			 p ("<li class=\"snapshot\">" ^ (string_of_snapshot mcurr.tm_snapshot) ^ "</li>");
+		       (match snapshot_id with
+			    None -> ()
+			  | Some snapshot_id ->
+			      p ("<li class=\"snapshot\">" ^ (snapshot_id) ^ "</li>")
+		       );
 		       perhaps e;
 		       perhaps d;
 		       perhaps w;
@@ -643,18 +585,106 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
 		       p "</ul>";
 		       p "</td>";
 		   end;
-      (*		 if merge && equal then
-		   ()
-		 else*)
-		   (if (i+1) < columns then
-		      match arr.(i+1) with
+;;
+
+let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_snapshot_id=false) ?title ?limit ?padding ?(rtl=true) ?(tip : tr_module option) arr =
+  let buffer = Buffer.create 1024 in
+  let p s = Buffer.add_string buffer s in
+  let titles, module_name =
+    match title with
+	None -> false, ""
+      | Some title -> true, title
+  in
+  let arr = if merge then module_history_merge arr else arr in
+  let arr =
+    match limit with
+	None -> arr
+      | Some max ->
+	  let len = Array.length arr in
+	    if len > max then
+	      Array.sub arr (len - max) max
+	    else arr
+  in
+  let arr =
+    match padding, limit with
+	_, None
+      | None, _ -> arr
+      | Some side, Some max ->
+	  let len = Array.length arr in
+	    if len < max then
+	      let arr' = Array.make max None in
+		Array.blit arr 0 arr' (match side with `left -> (max - len) | `right -> 0) len;
+		arr'
+	    else arr
+  in
+  let columns = Array.length arr in
+    p "<tr>";
+    if titles then
+      p ("<th>" ^ (href_module module_name) ^ "</th>");
+    if rtl then
+      begin match tip with
+	  None -> ()
+	| Some tip ->
+	    (render_module_td ~p ~snapshot_id:(if show_snapshot_id then Some "Tip" else None)) tip;
+      end;
+    Array.iteri
+      (fun i mopt ->
+	 let mopt =
+	   if rtl then
+	     arr.(columns - i - 1)
+	   else mopt
+	 in
+	 match mopt with
+	     None ->
+	       (p "<td class=\"unknown empty\"></td>";
+		(if (rtl && (i>0)) || (not rtl && (i+1) < columns) then p "<td class=\"next\"></td>"));
+	   | Some mcurr ->
+	       let equal =
+		 (if (rtl && (i>0)) || (not rtl && (i+1) < columns) then
+		    match if rtl then arr.(i-1) else arr.(i+1) with
+			None -> false (*merge*) (*false*) (* If we merge, we already have the edge *)
+		      | Some mnext ->
+			  if (href_diff ~current:mnext ~previous:mcurr) (* FIXME *) = "" && (equal_modules mcurr mnext) then true else false
+		  else false (*merge*) (*false*) (* same as above re: edge *)) &&
+		   (if (rtl && (i+1)<columns) || (not rtl && i > 0) then
+		      match if rtl then arr.(i+1) else arr.(i-1) with
+			  None -> true (* above we want to ensure we render the last one *)
+			| Some mprev ->
+			    if (href_diff ~current:mcurr ~previous:mprev) (* FIXME *) = "" && (equal_modules mprev mcurr) then true else false
+		    else true)
+	       in
+		 (if rtl && ((rtl && i>0) || (not rtl && ((i+1) < columns))) then
+		      match if rtl then arr.(i-1) else arr.(i+1) with
 			  None -> p "<td class=\"next\"></td>"
 			| Some mnext ->
+			    let dir = (if rtl then "-rtl" else "-ltr") in
+			    let diff_text =
+			      if rtl then
+				(href_diff ~current:mcurr ~previous:mnext)
+			      else (href_diff ~current:mnext ~previous:mcurr) in
+			    let escalation = (match AlertSort.highest_alert_compare mcurr.tm_result mnext.tm_result with -1 -> " <img src=\"static/images/error-increase" ^ dir ^ "-16x16.png\" alt=\"Errorlevel escalated.\" />" | 1 -> " <img src=\"static/images/error-decrease" ^ dir ^ "-16x16.png\" alt=\"Errorlevel de-escalated.\" />" | 0 -> if always_arrows then " <img src=\"static/images/next" ^ dir ^ "-16x16.png\" alt=\"\" />" else "" | _ -> (prerr_endline "impossible result from highest_alert_compare"; "")) in
+			      p ("<td class=\"next\">" ^ diff_text ^ escalation ^ "</td>")
+		   );
+		 if equal then
+		     p ("<td class=\"" ^ (safe_string_of_result mcurr.tm_result) ^ " empty\"></td>")
+		 else
+		   render_module_td ~p ~snapshot_id:(if show_snapshot_id then Some (string_of_snapshot mcurr.tm_snapshot) else None) mcurr;
+		 (if not rtl && ((rtl && i>0) || (not rtl && ((i+1) < columns))) then
+		      match if rtl then arr.(i-1) else arr.(i+1) with
+			  None -> p "<td class=\"next\"></td>"
+			| Some mnext ->
+			    let dir = (if rtl then "-rtl" else "-ltr") in
 			    let diff_text = (href_diff ~current:mnext ~previous:mcurr) in			       
-			    let escalation = (match AlertSort.highest_alert_compare mcurr.tm_result mnext.tm_result with -1 -> " <img src=\"static/images/error-increase-16x16.png\" alt=\"Errorlevel escalated.\" />" | 1 -> " <img src=\"static/images/error-decrease-16x16.png\" alt=\"Errorlevel de-escalated.\" />" | 0 -> if always_arrows then " <img src=\"static/images/next-16x16.png\" alt=\"\" />" else "" | _ -> (prerr_endline "impossible result from highest_alert_compare"; "")) in
+			    let escalation = (match AlertSort.highest_alert_compare mcurr.tm_result mnext.tm_result with -1 -> " <img src=\"static/images/error-increase" ^ dir ^ "-16x16.png\" alt=\"Errorlevel escalated.\" />" | 1 -> " <img src=\"static/images/error-decrease" ^ dir ^ "-16x16.png\" alt=\"Errorlevel de-escalated.\" />" | 0 -> if always_arrows then " <img src=\"static/images/next" ^ dir ^ "-16x16.png\" alt=\"\" />" else "" | _ -> (prerr_endline "impossible result from highest_alert_compare"; "")) in
 			      p ("<td class=\"next\">" ^ diff_text ^ escalation ^ "</td>")
 		   );
       ) arr;
+    if not rtl then
+      begin match tip with
+	  None -> ()
+	| Some tip ->
+	    (render_module_td ~p ~snapshot_id:(if show_snapshot_id then Some "Tip" else None)) tip;
+      end;
     if titles then
       p ("<th>" ^ (href_module module_name) ^ "</th>");
     p "</tr>";

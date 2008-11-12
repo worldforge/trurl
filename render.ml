@@ -105,12 +105,13 @@ let href_snapshot ?(result=false) s =
 
 let render_snapshot ch ({ ts_snapshot = (year, month, day, build); } as snapshot) past future =
   let snapshot_name = Printf.sprintf "%04i.%02i.%02i-%03i" year month day build in
-  let next () = Printf.fprintf ch "<img class=\"next\" src=\"static/images/next.png\" alt=\"next\" />" in
+  let next rtl = Printf.fprintf ch "%s" ("<img class=\"next\" src=\"static/images/next" ^ (if rtl then "-rtl" else "-ltr") ^ ".png\" alt=\"next\" />") in
+  let rtl = true in
     RenderCommon.html_head ~file:"" ~title:snapshot_name ch;
     Printf.fprintf ch "<div class=\"global builds\">\n";
-    List.iter (fun snap -> output_string ch (html_of_snapshot snap); next ()) past;
+    List.iter (fun snap -> output_string ch (html_of_snapshot snap); next rtl) past;
     output_string ch (html_of_snapshot ~current:true snapshot);
-    List.iter (fun snap -> next (); output_string ch (html_of_snapshot snap)) future;
+    List.iter (fun snap -> next rtl; output_string ch (html_of_snapshot snap)) future;
     Printf.fprintf ch "</div><div class=\"clear\"></div>\n";
 
     Printf.fprintf ch "<ul>\n";
@@ -169,6 +170,7 @@ let render_snapshot_table (columns, hash) (logs : tr_logs) =
   let ch = open_out (Filename.concat target_dir file) in
   let p = output_string ch in
   let columns = min 5 columns in
+  let rtl = true in
     RenderCommon.html_head ~title:"Snapshots" ~file ch;
 
     p "<table><tr><th></th>";
@@ -179,9 +181,9 @@ let render_snapshot_table (columns, hash) (logs : tr_logs) =
 	    p ("<th>" ^ (href_snapshot ~result:true snapshot) ^ "</th>");
 	| snapshot :: tl ->
 	    p ("<th>" ^ (href_snapshot ~result:true snapshot) ^ "</th>");
-	    p ("<th>" ^ "<img class=\"next\" src=\"static/images/next.png\" alt=\"next\" />" ^ "</th>");
+	    p ("<th>" ^ "<img class=\"next\" src=\"static/images/next" ^ (if rtl then "-rtl" else "-ltr") ^ ".png\" alt=\"next\" />" ^ "</th>");
 	    iter tl
-    in iter (List.drop (List.length (logs.tl_snapshots (* FIXME: add tip *)) - columns) (List.rev (logs.tl_snapshots)));
+    in iter (List.rev (List.drop (List.length (logs.tl_snapshots (* FIXME: add tip *)) - columns) (List.rev (logs.tl_snapshots))));
       p "<th></th>";
     p "</tr>";
 
@@ -195,7 +197,7 @@ let render_snapshot_table (columns, hash) (logs : tr_logs) =
     in
       List.iter
 	(fun (module_name, arr) ->
-	   p (module_history_to_table_row ~title:module_name ~limit:columns arr)
+	   p (module_history_to_table_row ~title:module_name ~limit:columns arr ~rtl)
 	) hash_lst;
 
   p "</table>";
@@ -305,9 +307,7 @@ let frontpage (logs : tr_logs) module_hash current_modules =
   in
   debug_endline (Printf.sprintf "Confusion: %i (%i other)" (List.length confusion) (List.length other));
   
-  (* Embarassing Mitsakes *)
-
-  RenderEmbarrassment.render ch other module_hash;
+  RenderEmbarrassment.render ch ~tip:logs.tl_tip other module_hash;
 
   if List.length other = 0 && List.length confusion = 0 then begin
     Printf.fprintf ch "<div id=\"other\"><h1>Zarro Boogs found.<img src=\"love.png\" /></h1></div>"
