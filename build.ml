@@ -107,11 +107,14 @@ let get_build_list () =
   in
   let module_ ~patch vcs m =
     let vcs, source_dir = get_vcs_tip m vcs in
-      
       { m_module = m; m_revision = vcs; m_source_dir = source_dir; m_steps = automake;
 	m_patch = patch; }
   in
-  let cvs ?patch path m =
+  let cvs ?patch m =
+    let vcs = (`cvs (":pserver:cvsanon@cvs.worldforge.org:2401/home/cvspsrv/worldforge", "", "HEAD")) in
+      module_ ~patch vcs m
+  in
+  let forge ?patch path m =
     let vcs = (`cvs (":pserver:cvsanon@cvs.worldforge.org:2401/home/cvspsrv/worldforge", ("forge/" ^ path), "HEAD")) in
       module_ ~patch vcs m
   in
@@ -121,25 +124,26 @@ let get_build_list () =
   in
     [
       git "libwfut";
-      cvs "libs" "skstream";
-      cvs "libs" "varconf";
-      cvs "libs" "Atlas-C++";
-      (*     target ~env:(fun _ -> ["PYTHONPATH", cvs_root ^ "/forge/libs/Atlas-Python/"]) "Atlas-C++";*)
-      cvs "libs" "wfmath";
-      cvs "libs" "mercator";
-      cvs "libs" "sage";
+      forge "libs" "skstream";
+      forge "libs" "varconf";
+      forge "libs" "Atlas-C++";
+      (*     target ~env:(fun _ -> ["PYTHONPATH", forge_root ^ "/forge/libs/Atlas-Python/"]) "Atlas-C++";*)
+      forge "libs" "wfmath";
+      forge "libs" "mercator";
+      forge "libs" "sage";
       git "eris";
-      (*cvs "scratchpad" "tree";*)
-      cvs "tools" "entityforge";
-      cvs "servers" "indri";
-      cvs "servers" "cyphesis-C++";
-      cvs "servers" "venus";
-      cvs ~patch:equator_patch "clients" "equator";
-      cvs "clients" "apogee";
-      cvs "clients" "silence";
-      cvs "clients" "process";
+      (*forge "scratchpad" "tree";*)
+      forge "tools" "entityforge";
+      forge "servers" "indri";
+      forge "servers" "cyphesis-C++";
+      forge "servers" "venus";
+      forge ~patch:equator_patch "clients" "equator";
+      forge "clients" "apogee";
+      forge "clients" "silence";
+      forge "clients" "process";
       git "sear";
       git "ember";
+      cvs "metaserver";
     ]
 ;;
 

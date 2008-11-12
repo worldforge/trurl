@@ -6,7 +6,7 @@ test -d /home/trurl/work/lock || mkdir -p /home/trurl/work/lock
     flock -x -w 3300 200 && (
         #cd /home/trurl/work/forge/
         #cvs -z6 update > ../cvs.forge.update 2>&1
-	REPOS='cvs%:pserver:cvsanon@cvs.worldforge.org:2401/home/cvspsrv/worldforge%forge'
+	REPOS='cvs%:pserver:cvsanon@cvs.worldforge.org:2401/home/cvspsrv/worldforge%forge cvs%:pserver:cvsanon@cvs.worldforge.org:2401/home/cvspsrv/worldforge%metaserver'
 	for MODULE in ember sear libwfut eris; do
             REPOS="$REPOS git%git://git.worldforge.org/$MODULE.git%$MODULE"
         done
