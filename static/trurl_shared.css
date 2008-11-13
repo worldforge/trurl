@@ -182,7 +182,7 @@ table ul, table li,
 .other table ul
 { margin: 0; padding: 0; list-style: none; border: none; }
 td.next { text-align: center; }
-td { border: 1px grey solid; border-bottom: 5px grey solid; }
+td { border: 1px gray solid; border-bottom: 5px gray solid; }
 td { margin: 0; padding: 1px; }
 td.next { border-color: white; }
 /*td.empty { border-color: white; }*/
