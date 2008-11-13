@@ -23,24 +23,7 @@ open Types
 type callbacks = {
   time : float -> unit;
 }
-    
-let render_line ?(first="") ?(anchor="") ?(link="") ?(pre=false) ch color string =
-  ch :=
-    (Printf.sprintf
-       "%s%s%s<font class=\"%s\">%s%s%s</font>%s%s<br>\n"
-       first
-       (if anchor <> "" then Printf.sprintf "<a name=\"%s\">" anchor else "")
-       (if link <> "" then Printf.sprintf "<a href=\"%s\">" link else "")
-       (safe_string_of_result color)
-       (if pre then "<tt>" else "")
-       (Str.global_substitute (Str.regexp "[<> ]")
-	  (fun x -> let x = Str.matched_string x in match x with "<" -> "&lt;" | ">" -> "&gt;" | " " -> "&nbsp;" | x -> x)
-	  string
-       )
-       (if pre then "</tt>" else "")
-       (if anchor <> "" then "</a>" else "")
-       (if link <> "" then "</a>" else "")
-    ) :: !ch
+
 let do_scan line format func =
   try
     (Scanf.sscanf line format func); true
