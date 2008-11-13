@@ -1,4 +1,12 @@
 
+ul.log.lines li,
+ul.log.index li { border-left-width: 2em; }
+ul.log.lines li:target { color: white; background-color: black; }
+
+.hide { display: none; }
+
+.meta span { border-left-width: 2em; border-left-style: solid; padding-left: 0.3em; }
+
 dl { border-left: solid gray 5px; }
 dl { border-top: solid gray 5px; }
 /*dl { border-bottom: solid gray 2px; }*/

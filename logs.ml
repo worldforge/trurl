@@ -158,7 +158,7 @@ let match_log s f =
 ;;
 
 let pattern_info pattern =
-(match pattern with Some (n_tried, rex) -> Printf.sprintf "<!-- %i: %s -->" n_tried rex | None -> "<!-- fallback -->")
+(match pattern with Some (n_tried, rex) -> Printf.sprintf "<span class=\"hide\"> %i: %s </span>" n_tried (RenderCommon.escape_html rex) | None -> "<!-- fallback -->")
 ;;
 
 let generate_logfile ~tm_module ~t ~target_file file_name : logfile =
@@ -245,15 +245,15 @@ let generate_logfile ~tm_module ~t ~target_file file_name : logfile =
      begin
         try
           let m = open_in (file_name ^ ".meta") in
-          output_string o "<tt>META:<br />\n";
+          output_string o "<tt class=\"meta\">META:<br />\n";
           Pcre.foreach_line ~ic:m
             (fun line ->
-               (if line = "result: EXIT,0" then
-                  output_string o "<font class=\"information\">"
+               (if line = "result: EXIT,0" || line = "exit: 0" then
+                  output_string o "<span class=\"information\">"
                 else
-                  output_string o "<font class=\"error\">");
+                  output_string o "<span class=\"error\">");
               output_string o line;
-              output_string o "</font><br />";
+              output_string o "</span><br />";
             );
           output_string o "</tt>\n";
           close_in m;
@@ -262,28 +262,34 @@ let generate_logfile ~tm_module ~t ~target_file file_name : logfile =
       end;
      if List.length idx > 0 then begin
 	output_string o "<h1>Index</h1>\n";
+	output_string o "<ul class=\"log index\">\n";
 	List.iter (fun (c, l, s, _) ->
           Printf.fprintf o
-            "<tt>%03i:&nbsp;</tt><a name=\"index%03i\"><a href=\"#%03i\"><font class=\"%s\">%s</font></a></a><br/>\n"
-            c c c (safe_string_of_result s)
+            "<li id=\"index%03i\" class=\"%s\"><tt class=\"line_number\">%03i:&nbsp;</tt><span class=\"text\"><a href=\"#line%03i\">%s</a></span></li>\n"
+            c (safe_string_of_result s) c c
             l
                   ) idx;
+	output_string o "</ul>\n";
       end;
       output_string o "<h1>Log</h1>\n";
        Printf.fprintf o "<a href=\"%s\">Raw log (%s).</a><br/>\n" (*source_file*) ("../" ^ source_file) source_file;
+       output_string o "<ul class=\"log lines\">\n";
       List.iter (fun (c, l, s, pattern) ->
-        if in_idx s then
+(*        if in_idx s then*)
           Printf.fprintf o
-            "<tt>%03i:&nbsp;</tt><a name=\"%03i\"><a href=\"#index%03i\"><font class=\"%s\">%s</font></a></a><br/>%s\n"
-            c c c (safe_string_of_result s)
+            "<li id=\"line%03i\" class=\"%s\"><tt class=\"line_number\">%03i:&nbsp;</tt><span class=\"text\">%s</span></li>%s\n"
+            c (safe_string_of_result s) c
+(*            "<tt>%03i:&nbsp;</tt><a name=\"%03i\"><a href=\"#index%03i\"><font class=\"%s\">%s</font></a></a><br/>%s\n"
+            c c c (safe_string_of_result s)*)
             l (pattern_info pattern)
-        else
+(*        else
           Printf.fprintf o
             "<tt>%03i:&nbsp;</tt><a name=\"%03i\"><font class=\"%s\">%s</font></a><br/>%s\n"
             c c (safe_string_of_result s)
-            l (pattern_info pattern)
+            l (pattern_info pattern)*)
                 )
         processed_lines;
+       output_string o "</ul>\n";
       Printf.fprintf o "</div>";
       RenderCommon.html_foot ~valid:false o;
       close_out o;
