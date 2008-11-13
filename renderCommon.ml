@@ -728,7 +728,15 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
 		 if equal then
 		     p ("<td class=\"" ^ (safe_string_of_result mcurr.tm_result) ^ " empty\"></td>")
 		 else
-		   render_module_td ~p ~snapshot_id:(if show_snapshot_id then Some (string_of_snapshot mcurr.tm_snapshot) else None) mcurr;
+		   render_module_td
+~may_fold:(
+  match tip with
+      None -> false
+    | Some tip ->
+	(* all tip platforms exist in mcurr *)
+	  not (List.exists (fun { tp_platform = tip_platform } -> not (List.exists (fun { tp_platform = mcurr_platform } -> tip_platform = mcurr_platform) mcurr.tm_platforms)) tip.tm_platforms)
+)
+ ~p ~snapshot_id:(if show_snapshot_id then Some (string_of_snapshot mcurr.tm_snapshot) else None) mcurr;
 		 (if not rtl && ((rtl && i>0) || (not rtl && ((i+1) < columns))) then
 		      match if rtl then arr.(i-1) else arr.(i+1) with
 			  None -> p "<td class=\"next\"></td>"
