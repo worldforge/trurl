@@ -566,8 +566,8 @@ let fold_into lst =
     let cnt = (!fold_into_counter) in
     let unified_platform = "linux" in
       Some
-	(Printf.sprintf "<span id=\"hide%i\" class=\"collapse container\" style=\"display: none\">" cnt,
-	 Printf.sprintf " <a href=\"javascript:;\" onclick=\"javascript:collapse2('hide%i', 'expand%i');\"><img src=\"static/images/platforms/%s-16x16.png\" alt=\"%s\"><img src=\"static/images/hide-16x16.png\" alt=\"hide\"></a></span><span id=\"expand%i\" class=\"collapse expand\"><a href=\"javascript:;\" onclick=\"javascript:collapse2('expand%i', 'hide%i');\"><img src=\"static/images/platforms/%s-16x16.png\" alt=\"%s\"><img src=\"static/images/expand-16x16.png\" alt=\"expand\"></a></span>" cnt cnt unified_platform unified_platform cnt cnt cnt unified_platform unified_platform)
+	(Printf.sprintf "<span id=\"expand%i\" class=\"collapse expand\"><a href=\"javascript:;\" onclick=\"javascript:collapse2('expand%i', 'hide%i');\"><img src=\"static/images/platforms/%s-16x16.png\" alt=\"%s\"><img src=\"static/images/expand-16x16.png\" alt=\"expand\"></a></span><span id=\"hide%i\" class=\"collapse container\" style=\"display: none\"><a href=\"javascript:;\" onclick=\"javascript:collapse2('hide%i', 'expand%i');\"><img src=\"static/images/platforms/%s-16x16.png\" alt=\"%s\"><img src=\"static/images/hide-16x16.png\" alt=\"hide\"></a>" cnt cnt cnt unified_platform unified_platform cnt cnt cnt unified_platform unified_platform,
+	 Printf.sprintf "</span>")
   end else
     None
 ;;
