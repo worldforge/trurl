@@ -652,6 +652,7 @@ let acc_hosts dir snapshot revisions : tr_snapshot =
       ) snapshot hosts
 ;;
 
+let global_latest_snapshot = ref None;;
 let acc_snapshots dir : tr_snapshot list =
   let acc =
     let n_acc_snapshots = ref 0 in
@@ -677,6 +678,7 @@ let acc_snapshots dir : tr_snapshot list =
 				 List.map
 				   (fun snap ->
 				      let snapshot = (int_of_string year, int_of_string month, int_of_string day, int_of_string snap) in
+				      (if !global_latest_snapshot = None then global_latest_snapshot := Some snapshot);
 				      let snapshot_dir = dir ^ "/" ^ year ^ "/" ^ month ^ "/" ^ day ^ "/" ^ snap in
 				      let revisions_file = (snapshot_dir ^ "/revisions") in
 				      let hosts_dir = (snapshot_dir ^ "/" ^ "hosts") in
@@ -782,6 +784,7 @@ let add_live_data (snapshots : tr_snapshot list) =
 ;;
 
 let merge_tip (tip : tr_module list) (snapshot : tr_snapshot) =
+  let tip =
   List.fold_left
     (fun tip_modules snap_module ->
 	   let rec merge acc lst =
@@ -808,6 +811,24 @@ let merge_tip (tip : tr_module list) (snapshot : tr_snapshot) =
 		     merge (hd :: acc) tl
 	   in merge [] tip_modules
     ) tip snapshot.ts_modules
+  in
+    (* merge live tip data *)
+    match !global_latest_snapshot with
+	None ->
+	  prerr_endline "Warning: No latest snapshot found while merging tip live data.";
+	  tip
+      | Some latest_snapshot ->
+	  List.map
+	    (fun ({ tm_platforms = tm_platforms; tm_building = tm_building; } as m) ->
+	       { m with
+		   tm_scheduled =
+		   List.fold_left
+		     (fun acc { tp_snapshot = tp_snapshot; tp_platform = tp_platform } ->
+			if tp_snapshot <> latest_snapshot && not (List.exists (fun { tmb_platform = tmb_platform } -> tp_platform = tmb_platform) tm_building) then
+			  { tms_platform = tp_platform; tms_host = "unknown-fixme" } :: acc
+			else acc
+		     ) [] tm_platforms }
+	    ) tip
 ;;
 
 let calc_tip snapshots =
