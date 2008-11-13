@@ -341,7 +341,7 @@ let render_mistakes platforms_mistakes =
 			) "" (up_to 10 error_messages) ^
 			"</tt>" ^
 			(if List.length error_messages > 10 then
-			   Printf.sprintf "<tt>Log contains %i more messages.</tt><br/>\n" (List.length error_messages - 10)
+			   Printf.sprintf "<tt>Log contains %s.</tt><br/>\n" (mklink ("generated/" ^ log_filename) (Printf.sprintf "%i more messages" (List.length error_messages - 10)))
 			 else "")
 		    else (* Meta told us something bad happened. *)
 		      " Non-zero exit status.<br />Check meta for specifics."
