@@ -145,11 +145,39 @@ let mklink link name =
   "<a href=\"" ^ link ^ "\">" ^ (escape_html name) ^ "</a>"
 
 let html_head ?file ?(dynamic="") ?title ch =
-  Printf.fprintf ch "%s\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n%s<title>%sWorldForge's Autobuilder</title>\n<link rel=\"icon\" href=\"/favicon.ico\" type=\"image/x-icon\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_shared.css\" type=\"text/css\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_frontpage.css\" type=\"text/css\" />\n</head>\n<body>\n<div class=\"top_menu\">%s<!--<ul>%s</ul>-->%s</div>%s<div class=\"sub_menu\">%s</div>\n"
+  Printf.fprintf ch "%s\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n%s<title>%sWorldForge's Autobuilder</title>\n<link rel=\"icon\" href=\"/favicon.ico\" type=\"image/x-icon\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_shared.css\" type=\"text/css\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_frontpage.css\" type=\"text/css\" />\n%s</head>\n<body>\n<div class=\"top_menu\">%s%s</div>%s<div class=\"sub_menu\">%s</div>\n"
     ((if match file with None -> false | Some file -> ends_with ".php" file then "<?php echo '<?xml version=\"1.0\" encoding=\"utf-8\" ?>'; ?>" else "<?xml version=\"1.0\" encoding=\"utf-8\" ?>") ^ "\n" ^ doctype_xhtml11)
     meta_refresh (match title with None -> "" | Some t -> t ^ " - ")
+    
+"<script type=\"text/javascript\">
+//<![CDATA[
+function collapse(id) {
+  var obj = document.getElementById(id);
+  if (\"none\" == obj.style.display) {
+    obj.style.display = \"block\";
+  } else {
+    obj.style.display = \"none\";
+  }
+}
+function collapse2(id1, id2) {
+  var obj1 = document.getElementById(id1);
+  var obj2 = document.getElementById(id2);
+  if (\"none\" == obj1.style.display) {
+    obj1.style.display = \"inline\";
+  } else {
+    obj1.style.display = \"none\";
+  }
+  if (\"none\" == obj2.style.display) {
+    obj2.style.display = \"inline\";
+  } else {
+    obj2.style.display = \"none\";
+  }
+}
+//]]>
+</script>"
+
     (if enable_debug_features then "Debug mode activated. This page will refresh every " ^ (if meta_refresh_interval = 10 then "ten" else Printf.sprintf "%i" meta_refresh_interval) ^ " seconds." else "")
-    (List.fold_left
+(*    (List.fold_left
        (fun str (link, ext, title) ->
           str ^ "<li><a href=\"" ^ link ^ "\">" ^ title ^ (if ext then " <img src=\"/trurl/static/images/external.png\" alt=\"external link\" />" else "") ^ "</a></li>"
        ) "" (
@@ -162,7 +190,7 @@ let html_head ?file ?(dynamic="") ?title ch =
 	  ("#", false, "(Modules)");
 	  ("#", false, "(Platforms)");
 	  ("#", false, "(Builds In Progress)");
-	] else [])))
+	] else [])))*)
     ("<a href=\"http://www.worldforge.org/\">WorldForge</a>'s <a href=\"" ^ html_root ^ "\">Autobuilder</a>")
     dynamic
     (List.fold_left
@@ -531,7 +559,20 @@ let module_history_merge arr =
     Array.of_list (List.rev_map (fun x -> Some x) !merged)
 ;;
 
-let render_module_td ~p ?(snapshot_id=None) mcurr =
+let fold_into_counter = ref 0;; (* FIXME use per-page counter *)
+let fold_into lst =
+  if not (List.exists (fun { tp_platform = platform } -> not (List.mem (fst (split platform '-')) ["ubuntu"; "fedora"; "debian"])) lst) then begin
+    incr fold_into_counter;
+    let cnt = (!fold_into_counter) in
+    let unified_platform = "linux" in
+      Some
+	(Printf.sprintf "<span id=\"hide%i\" class=\"collapse container\" style=\"display: none\">" cnt,
+	 Printf.sprintf " <a href=\"javascript:;\" onclick=\"javascript:collapse2('hide%i', 'expand%i');\"><img src=\"static/images/platforms/%s-16x16.png\" alt=\"%s\"><img src=\"static/images/hide-16x16.png\" alt=\"hide\"></a></span><span id=\"expand%i\" class=\"collapse expand\"><a href=\"javascript:;\" onclick=\"javascript:collapse2('expand%i', 'hide%i');\"><img src=\"static/images/platforms/%s-16x16.png\" alt=\"%s\"><img src=\"static/images/expand-16x16.png\" alt=\"expand\"></a></span>" cnt cnt unified_platform unified_platform cnt cnt cnt unified_platform unified_platform)
+  end else
+    None
+;;
+
+let render_module_td ?(may_fold=false) ~p ?(snapshot_id=None) mcurr =
 		   begin
 		     p ("<td class=\"" ^ (safe_string_of_result mcurr.tm_result) ^ "\">");
 		     let e, d, w, s, u =
@@ -546,6 +587,17 @@ let render_module_td ~p ?(snapshot_id=None) mcurr =
 				 | Information -> acc e d w (hd :: s) u tl
 				 | Unknown -> acc e d w s (hd :: u) tl
 		       in acc [] [] [] [] [] mcurr.tm_platforms
+		     in
+		     let shall_fold =
+		       may_fold &&
+			 (match e, d, w, s, u with
+			      _, [], [], [], []
+			    | [], _, [], [], []
+			    | [], [], _, [], []
+			    | [], [], [], _, []
+			    | [], [], [], [], _
+				-> true
+			    | _ -> false)
 		     in
 		     let fold_platforms lst =
 		       List.fold_left
@@ -562,8 +614,16 @@ let render_module_td ~p ?(snapshot_id=None) mcurr =
 		     let perhaps lst =
 		       if List.length lst > 0 then
 			 let result = (List.hd lst).tp_result in
-			 let img, text = icon_and_text ~small:true result in
-			   p (Printf.sprintf "<li class=\"%s\">%s:%s</li>" (safe_string_of_result result) img (* text takes too much space here *) (fold_platforms lst));
+			 if shall_fold then
+			   let img, text = icon_and_text ~small:true result in
+			     match fold_into lst with
+				 None ->
+				   p (Printf.sprintf "<li class=\"%s\">%s:%s</li>" (safe_string_of_result result) img (* text takes too much space here *) (fold_platforms lst));
+			       | Some (folded_begin, folded_end) -> (* FIXME, excess space before platform fold *)
+				   p (Printf.sprintf "<li class=\"%s\">%s: %s%s%s</li>" (safe_string_of_result result) img (* text takes too much space here *) folded_begin (fold_platforms lst) folded_end);
+			 else
+			   let img, text = icon_and_text ~small:true result in
+			     p (Printf.sprintf "<li class=\"%s\">%s:%s</li>" (safe_string_of_result result) img (* text takes too much space here *) (fold_platforms lst));
 		     in
 		     let perhaps' (action, action_safe) lst =
 		       if List.length lst > 0 then
@@ -625,7 +685,7 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
       begin match tip with
 	  None -> ()
 	| Some tip ->
-	    (render_module_td ~p ~snapshot_id:(if show_snapshot_id then Some "Tip" else None)) tip;
+	    (render_module_td ~may_fold:true ~p ~snapshot_id:(if show_snapshot_id then Some "Tip" else None)) tip;
       end;
     Array.iteri
       (fun i mopt ->
@@ -683,7 +743,7 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
       begin match tip with
 	  None -> ()
 	| Some tip ->
-	    (render_module_td ~p ~snapshot_id:(if show_snapshot_id then Some "Tip" else None)) tip;
+	    (render_module_td ~may_fold:true ~p ~snapshot_id:(if show_snapshot_id then Some "Tip" else None)) tip;
       end;
     if titles then
       p ("<th>" ^ (href_module module_name) ^ "</th>");
