@@ -177,20 +177,6 @@ function collapse2(id1, id2) {
 </script>"
 
     (if enable_debug_features then "Debug mode activated. This page will refresh every " ^ (if meta_refresh_interval = 10 then "ten" else Printf.sprintf "%i" meta_refresh_interval) ^ " seconds." else "")
-(*    (List.fold_left
-       (fun str (link, ext, title) ->
-          str ^ "<li><a href=\"" ^ link ^ "\">" ^ title ^ (if ext then " <img src=\"/trurl/static/images/external.png\" alt=\"external link\" />" else "") ^ "</a></li>"
-       ) "" (
-      [
-	("http://www.worldforge.org/", true, "WorldForge");
-	("http://yellow.worldforge.org/", true, "Yellow");
-	("/trurl/", false, "Trurl Frontpage");
-      ] @ (if enable_debug_features then
-	[
-	  ("#", false, "(Modules)");
-	  ("#", false, "(Platforms)");
-	  ("#", false, "(Builds In Progress)");
-	] else [])))*)
     ("<a href=\"http://www.worldforge.org/\">WorldForge</a>'s <a href=\"" ^ html_root ^ "\">Autobuilder</a>")
     dynamic
     (List.fold_left
