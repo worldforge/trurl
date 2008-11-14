@@ -523,6 +523,42 @@ let equal_modules a b =
   ) true a.tm_platforms b.tm_platforms
 ;;
 
+let merge_equal_modules ~target:a ~other:b =
+  if
+    a.tm_module = b.tm_module &&
+    (same_revision a.tm_module a.tm_revision b.tm_revision)
+  then
+    let rec merge acc ap bp =
+      match ap, bp with
+	  [], [] ->
+	    Some { acc with tm_result = AlertSort.fold_result_platforms acc.tm_platforms }
+	| lst, []
+	| [], lst ->
+	    merge { acc with tm_platforms = (lst @ acc.tm_platforms) } [] []
+	| hd :: tl, lst ->
+	    match list_find_option (fun p -> p.tp_platform = hd.tp_platform) lst with
+		None ->
+		  merge { acc with tm_platforms = (hd :: acc.tm_platforms) } tl lst
+	      | Some other ->
+		  if hd.tp_result = other.tp_result (* FIXME compare log lines *) then
+		    merge { acc with tm_platforms = (hd :: acc.tm_platforms) } tl (List.filter (fun p -> p.tp_platform <> hd.tp_platform) lst)
+		  else
+		    None
+    in merge { a with tm_platforms = [] } a.tm_platforms b.tm_platforms
+(*	    
+  a.tm_result = b.tm_result (* FIXME *) &&
+  (* ignore tm_result and verify that for all tm_platforms in a the result lines are equal to those in b and the other way around, if so, merge missing platforms into b and return b *)
+  (List.length a.tm_platforms) = (List.length b.tm_platforms) (* is this correct? FIXME *) &&
+  List.fold_left2
+  (fun acc a' b' ->
+     acc &&
+       a'.tp_platform = b'.tp_platform &&
+      a'.tp_result = b'.tp_result &&
+      true (* FIXME tp_builds *)
+  ) true a.tm_platforms b.tm_platforms*)
+  else None
+;;
+
 let icon_and_text ?(small=false) result =
   let img, text =
     match result with
@@ -551,10 +587,17 @@ let module_history_merge arr =
 		 [] ->
 		   merged := mcurr :: (!merged)
 	       | hd :: tl ->
+		   match merge_equal_modules ~other:hd ~target:mcurr with
+		       None ->
+			 merged := mcurr :: (!merged)
+		     | Some merged' ->
+			 merged := merged' :: tl
+(*
 		   if equal_modules hd mcurr then
 		     merged := mcurr :: tl
 		   else
 		     merged := mcurr :: (!merged)
+*)
     ) arr;
     Array.of_list (List.rev_map (fun x -> Some x) !merged)
 ;;
@@ -702,13 +745,13 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
 	       let equal =
 		 (if (rtl && (i>0)) || (not rtl && (i+1) < columns) then
 		    match if rtl then arr.(i-1) else arr.(i+1) with
-			None -> false (*merge*) (*false*) (* If we merge, we already have the edge *)
+			None -> not rtl (*false*) (*merge*) (*false*) (* If we merge, we already have the edge *)
 		      | Some mnext ->
 			  if (href_diff ~current:mnext ~previous:mcurr) (* FIXME *) = "" && (equal_modules mcurr mnext) then true else false
 		  else false (*merge*) (*false*) (* same as above re: edge *)) &&
 		   (if (rtl && (i+1)<columns) || (not rtl && i > 0) then
 		      match if rtl then arr.(i+1) else arr.(i-1) with
-			  None -> true (* above we want to ensure we render the last one *)
+			  None -> rtl (*true*) (* above we want to ensure we render the last one *)
 			| Some mprev ->
 			    if (href_diff ~current:mcurr ~previous:mprev) (* FIXME *) = "" && (equal_modules mprev mcurr) then true else false
 		    else true)
@@ -725,7 +768,7 @@ let module_history_to_table_row ?(merge=false) ?(always_arrows=false) ?(show_sna
 			    let escalation = (match AlertSort.highest_alert_compare mcurr.tm_result mnext.tm_result with -1 -> " <img src=\"static/images/error-increase" ^ dir ^ "-16x16.png\" alt=\"Errorlevel escalated.\" />" | 1 -> " <img src=\"static/images/error-decrease" ^ dir ^ "-16x16.png\" alt=\"Errorlevel de-escalated.\" />" | 0 -> if always_arrows then " <img src=\"static/images/next" ^ dir ^ "-16x16.png\" alt=\"\" />" else "" | _ -> (prerr_endline "impossible result from highest_alert_compare"; "")) in
 			      p ("<td class=\"next\">" ^ diff_text ^ escalation ^ "</td>")
 		   );
-		 if equal then
+		 if not merge && equal then
 		     p ("<td class=\"" ^ (safe_string_of_result mcurr.tm_result) ^ " empty\"></td>")
 		 else
 		   render_module_td

@@ -75,6 +75,13 @@ let begins_with pattern string =
     String.sub string 0 (String.length pattern) = pattern
 ;;
 
+let list_find_option pred lst =
+  try
+    Some (List.find pred lst)
+  with Not_found ->
+    None
+;;
+
 let global_verbose =
   try
     Sys.argv.(2) = "--verbose" || Sys.argv.(3) = "--verbose"
