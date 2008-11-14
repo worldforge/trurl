@@ -165,7 +165,7 @@ let hooks changeset latest_modules =
       (fun ((module_, platform), (past, present)) ->
          match Unix.fork () with
              0 ->
-               Unix.execv "./hook_changeset" [| "./hook_changeset"; Printf.sprintf "%s: %s on %s (from %s)" module_ present platform (match past with None -> "<none>" | Some res -> res); "http://yellow.worldforge.org/trurl/" |]
+               Unix.execv "./hook_changeset" [| "./hook_changeset"; Printf.sprintf "%s: %s on %s (from %s)" module_ present platform (match past with None -> "<none>" | Some res -> res); "http://trurl.worldforge.org/" |]
            | _ -> ()
       ) changeset;
 

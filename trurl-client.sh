@@ -9,6 +9,6 @@ fi
 export PATH="/usr/lib/ccache:$PATH"
 (
     flock -x -w 3300 200 && (
-	curl -s -S -f "http://yellow.worldforge.org/trurl/client.php?action=bootstrap&archetype=posix&host=""$HOST" -o bootstrap.sh && bash bootstrap.sh
+	curl -s -S -f "http://trurl.worldforge.org/client.php?action=bootstrap&archetype=posix&host=""$HOST" -o bootstrap.sh && bash bootstrap.sh
     )
 ) 200>trurl.lock

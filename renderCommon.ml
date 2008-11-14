@@ -144,8 +144,8 @@ let escape_html =
 let mklink link name =
   "<a href=\"" ^ link ^ "\">" ^ (escape_html name) ^ "</a>"
 
-let html_head ?file ?(dynamic="") ?title ch =
-  Printf.fprintf ch "%s\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n%s<title>%sWorldForge's Autobuilder</title>\n<link rel=\"icon\" href=\"/favicon.ico\" type=\"image/x-icon\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_shared.css\" type=\"text/css\" />\n<link rel=\"stylesheet\" href=\"/trurl/static/trurl_frontpage.css\" type=\"text/css\" />\n%s</head>\n<body>\n<div class=\"top_menu\">%s%s</div>%s<div class=\"sub_menu\">%s</div>\n"
+let html_head ?file ?(dynamic="") ?title ch = (* FIXME, clean this up and use html_root *)
+  Printf.fprintf ch "%s\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n%s<title>%sWorldForge's Autobuilder</title>\n<link rel=\"icon\" href=\"/favicon.ico\" type=\"image/x-icon\" />\n<link rel=\"stylesheet\" href=\"/static/trurl_shared.css\" type=\"text/css\" />\n<link rel=\"stylesheet\" href=\"/static/trurl_frontpage.css\" type=\"text/css\" />\n%s</head>\n<body>\n<div class=\"top_menu\">%s%s</div>%s<div class=\"sub_menu\">%s</div>\n"
     ((if match file with None -> false | Some file -> ends_with ".php" file then "<?php echo '<?xml version=\"1.0\" encoding=\"utf-8\" ?>'; ?>" else "<?xml version=\"1.0\" encoding=\"utf-8\" ?>") ^ "\n" ^ doctype_xhtml11)
     meta_refresh (match title with None -> "" | Some t -> t ^ " - ")
     

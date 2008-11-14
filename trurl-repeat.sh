@@ -1,7 +1,7 @@
 #! /bin/bash
 
 if ! [ -f trurl-client.sh ]; then
-    wget http://yellow.worldforge.org/trurl/trurl-client.sh
+    wget http://trurl.worldforge.org/trurl-client.sh
     chmod +x trurl-client.sh
 fi
 

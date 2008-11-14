@@ -19,8 +19,8 @@
 
 open ExtLib;;
 
-let http_root = "http://yellow.worldforge.org/trurl/client.php";;
-let http_source_root = "http://yellow.worldforge.org/trurl/client/source";;
+let http_root = "http://trurl.worldforge.org/client.php";;
+let http_source_root = "http://trurl.worldforge.org/client/source";;
 
 let client dir log_root =
   let ch = open_out (dir ^ "/client.php") in

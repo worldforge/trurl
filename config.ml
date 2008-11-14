@@ -48,10 +48,11 @@ let generate_n_logs =
   with _ ->
     6
 
+let default_html_root = "/";;
 let html_root =
   try
-    if Sys.argv.(2) = "--testbed" then "/trurl/testbed/" else "/trurl/"
-  with _ -> "/trurl/";;
+    if Sys.argv.(2) = "--testbed" then "/trurl/testbed/" else default_html_root
+  with _ -> default_html_root;;
 
 let rules_filename = "trurl_log_rules.xml"
 let stat_self = Unix.stat Sys.argv.(0)

@@ -6,7 +6,7 @@ server = "irc.worldforge.org"
 port = 6667
 nick = "Trurl"
 channel = "#coders"
-new_topic = "[[ http://yellow.worldforge.org/trurl/ " + sys.argv[1] + " ]]"
+new_topic = "[[ http://trurl.worldforge.org/ " + sys.argv[1] + " ]]"
 try:
     old_topic = open('hook_irc.topic', 'r').read()
 except:
