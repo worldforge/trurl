@@ -1,6 +1,6 @@
 
 ul.log.lines li,
-ul.log.index li { border-left-width: 2em; }
+ul.log.index li { border-left-width: 2em; margin: 0; }
 ul.log.lines li:target { color: white; background-color: black; }
 
 .hide { display: none; }
